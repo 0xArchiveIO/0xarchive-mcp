@@ -35,10 +35,11 @@ const server = new McpServer({
   version: "1.0.0",
 });
 
-// All tools are read-only API queries to an external service
+// All tools are read-only, idempotent API queries to an external service
 const TOOL_ANNOTATIONS = {
   readOnlyHint: true,
   destructiveHint: false,
+  idempotentHint: true,
   openWorldHint: true,
 } as const;
 
@@ -97,6 +98,25 @@ const HistoryParams = {
 };
 
 // ---------------------------------------------------------------------------
+// B2. Output Schemas (structuredContent)
+// ---------------------------------------------------------------------------
+
+// For tools that return arrays (instruments, history, candles, etc.)
+const ListOutputSchema: ZodRawShape = {
+  records: z.array(z.record(z.unknown())).describe("Array of result records"),
+  count: z.number().describe("Total number of records in the full result set"),
+  nextCursor: z
+    .string()
+    .optional()
+    .describe("Cursor for next page, if more results available"),
+};
+
+// For tools that return a single object (current snapshots, orderbooks, data quality)
+const ObjectOutputSchema: ZodRawShape = {
+  data: z.record(z.unknown()).describe("Result data object"),
+};
+
+// ---------------------------------------------------------------------------
 // C. Smart Defaults
 // ---------------------------------------------------------------------------
 
@@ -125,7 +145,10 @@ function resolveLimit(limit?: number): number {
 // D. Error Handling
 // ---------------------------------------------------------------------------
 
-type McpContent = { content: Array<{ type: "text"; text: string }> };
+type McpContent = {
+  content: Array<{ type: "text"; text: string }>;
+  structuredContent?: Record<string, unknown>;
+};
 
 function formatError(error: unknown): McpContent & { isError: true } {
   if (error instanceof OxArchiveError) {
@@ -217,7 +240,17 @@ function formatResponse(
 
   const json = JSON.stringify(body, null, 2);
   const text = header ? `${header}\n\n${json}` : json;
-  return { content: [{ type: "text", text }] };
+
+  // Build structuredContent matching ListOutputSchema or ObjectOutputSchema
+  const structuredContent: Record<string, unknown> = Array.isArray(data)
+    ? {
+        records: body,
+        count: data.length,
+        ...(meta?.nextCursor && { nextCursor: meta.nextCursor }),
+      }
+    : { data };
+
+  return { content: [{ type: "text", text }], structuredContent };
 }
 
 function formatCursorResponse(result: {
@@ -254,6 +287,7 @@ function registerTool(
   name: string,
   description: string,
   inputSchema: ZodRawShape,
+  outputSchema: ZodRawShape,
   handler: (params: any) => Promise<McpContent>
 ): void {
   server.registerTool(
@@ -261,6 +295,7 @@ function registerTool(
     {
       description,
       inputSchema,
+      outputSchema,
       annotations: TOOL_ANNOTATIONS,
     },
     async (params: any) => {
@@ -285,7 +320,7 @@ function registerInstrumentsTool(
   description: string,
   sdkCall: () => Promise<unknown[]>
 ): void {
-  registerTool(name, description, {}, async () => {
+  registerTool(name, description, {}, ListOutputSchema, async () => {
     const data = await sdkCall();
     return formatResponse(data);
   });
@@ -299,7 +334,7 @@ function registerCurrentTool(
   coinSchema: z.ZodString,
   normFn: (coin: string) => string
 ): void {
-  registerTool(name, description, { coin: coinSchema }, async (params) => {
+  registerTool(name, description, { coin: coinSchema }, ObjectOutputSchema, async (params) => {
     const data = await sdkCall(normFn(params.coin));
     return formatResponse(data);
   });
@@ -317,6 +352,7 @@ function registerOrderbookTool(
     name,
     description,
     { coin: coinSchema, depth: DepthParam },
+    ObjectOutputSchema,
     async (params) => {
       const sdkParams = params.depth ? { depth: params.depth } : undefined;
       const data = await sdkCall(normFn(params.coin), sdkParams);
@@ -337,7 +373,7 @@ function registerHistoryTool(
   const schema: ZodRawShape = { coin: coinSchema, ...HistoryParams };
   if (extraSchema) Object.assign(schema, extraSchema);
 
-  registerTool(name, description, schema, async (params) => {
+  registerTool(name, description, schema, ListOutputSchema, async (params) => {
     const { coin, start, end, limit, cursor, ...extra } = params;
 
     const timeRange = resolveTimeRange(start, end);
@@ -580,9 +616,9 @@ registerHistoryTool(
 // ---------------------------------------------------------------------------
 
 const ExchangeParam = z
-  .string()
+  .enum(["hyperliquid", "lighter", "hip3"])
   .optional()
-  .describe("Exchange name: 'hyperliquid', 'lighter', or 'hip3'");
+  .describe("Exchange name");
 
 const IncidentStatusParam = z
   .enum(["open", "investigating", "identified", "monitoring", "resolved"])
@@ -594,6 +630,7 @@ registerTool(
   "get_data_quality_status",
   "Get the current system status for all exchanges and data types. Returns overall health (operational/degraded/outage), per-exchange status with latency, per-data-type completeness, and active incident count.",
   {},
+  ObjectOutputSchema,
   async () => {
     const data = await api().dataQuality.status();
     return formatResponse(data);
@@ -605,6 +642,7 @@ registerTool(
   "get_data_coverage",
   "Get data coverage across all exchanges. Returns earliest/latest timestamps, total records, symbol count, resolution, lag, and completeness per data type per exchange.",
   {},
+  ObjectOutputSchema,
   async () => {
     const data = await api().dataQuality.coverage();
     return formatResponse(data);
@@ -616,11 +654,12 @@ registerTool(
   "get_symbol_coverage",
   "Get detailed data coverage for a specific symbol on an exchange. Returns per-data-type coverage with earliest/latest, total records, completeness, detected data gaps, and cadence metrics.",
   {
-    exchange: z.string().describe("Exchange: 'hyperliquid', 'lighter', or 'hip3'"),
+    exchange: z.enum(["hyperliquid", "lighter", "hip3"]).describe("Exchange name"),
     symbol: z.string().describe("Symbol, e.g. 'BTC', 'ETH', 'km:US500'"),
     from: TimestampParam.describe("Start of gap detection window (Unix ms or ISO). Defaults to 30 days ago."),
     to: TimestampParam.describe("End of gap detection window (Unix ms or ISO). Defaults to now."),
   },
+  ObjectOutputSchema,
   async (params) => {
     const options: Record<string, unknown> = {};
     if (params.from != null) options.from = toUnixMs(params.from);
@@ -645,6 +684,7 @@ registerTool(
     limit: z.number().optional().describe("Max results (default 20, max 100)"),
     offset: z.number().optional().describe("Pagination offset"),
   },
+  ListOutputSchema,
   async (params) => {
     const sdkParams: Record<string, unknown> = {};
     if (params.status) sdkParams.status = params.status;
@@ -664,6 +704,7 @@ registerTool(
   "get_data_latency",
   "Get current latency metrics for all exchanges. Returns WebSocket latency (current, 1h avg, 24h avg), REST API latency, and data freshness lag per data type (orderbook, fills, funding, OI).",
   {},
+  ObjectOutputSchema,
   async () => {
     const data = await api().dataQuality.latency();
     return formatResponse(data);
@@ -678,6 +719,7 @@ registerTool(
     year: z.number().optional().describe("Year (defaults to current year)"),
     month: z.number().optional().describe("Month 1-12 (defaults to current month)"),
   },
+  ObjectOutputSchema,
   async (params) => {
     const sdkParams: Record<string, unknown> = {};
     if (params.year) sdkParams.year = params.year;
