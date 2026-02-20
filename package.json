@@ -1,0 +1,26 @@
+{
+  "name": "@0xarchive/mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server exposing 0xArchive market data API as tools for Claude Desktop/Code/API",
+  "type": "module",
+  "bin": {
+    "0xarchive-mcp": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@0xarchive/sdk": "latest",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^22.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
