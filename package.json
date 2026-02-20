@@ -6,14 +6,18 @@
   "bin": {
     "0xarchive-mcp": "./build/index.js"
   },
+  "files": [
+    "build"
+  ],
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "start": "node build/index.js",
     "dev": "tsc --watch"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
-    "@0xarchive/sdk": "latest",
+    "@0xarchive/sdk": "^0.8.2",
     "zod": "^3.23.0"
   },
   "devDependencies": {
