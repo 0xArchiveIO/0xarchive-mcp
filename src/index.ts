@@ -11,15 +11,24 @@ import { z, type ZodRawShape } from "zod";
 
 const apiKey = process.env.OXARCHIVE_API_KEY;
 if (!apiKey) {
-  console.error(
-    "Error: OXARCHIVE_API_KEY environment variable is required.\n" +
-      "Get your API key at https://0xarchive.io/settings\n" +
-      "Then set it: export OXARCHIVE_API_KEY=0xa_..."
-  );
-  process.exit(1);
+  console.error("Warning: OXARCHIVE_API_KEY not set. Server will start but all tools will return setup instructions.");
 }
 
-const client = new OxArchive({ apiKey, timeout: 60000 });
+const client = apiKey ? new OxArchive({ apiKey, timeout: 60000 }) : null;
+
+// Safe accessor — only called from tool handlers after the null guard in registerTool
+function api(): OxArchive {
+  return client!;
+}
+
+const MISSING_KEY_MESSAGE =
+  `API key not configured. To use 0xArchive tools:\n\n` +
+  `1. Sign up at https://0xarchive.io and go to Dashboard to create an API key\n` +
+  `2. Reconfigure the MCP server with your key:\n\n` +
+  `   claude mcp remove 0xarchive\n` +
+  `   claude mcp add 0xarchive -s user -t stdio -e OXARCHIVE_API_KEY=0xa_your_key -- node /path/to/build/index.js\n\n` +
+  `3. Start a new Claude Code session\n\n` +
+  `Free tier includes BTC historical data. Upgrade at https://0xarchive.io/pricing for all coins.`;
 
 const server = new McpServer({
   name: "0xarchive",
@@ -255,6 +264,12 @@ function registerTool(
       annotations: TOOL_ANNOTATIONS,
     },
     async (params: any) => {
+      if (!client) {
+        return {
+          content: [{ type: "text" as const, text: MISSING_KEY_MESSAGE }],
+          isError: true,
+        };
+      }
       try {
         return await handler(params);
       } catch (error) {
@@ -369,14 +384,14 @@ function registerCandleTool(
 registerInstrumentsTool(
   "get_instruments",
   "List all available Hyperliquid perpetual and spot instruments with leverage, decimals, and active status. Use this to discover valid coin symbols before querying other endpoints.",
-  () => client.hyperliquid.instruments.list()
+  () => api().hyperliquid.instruments.list()
 );
 
 // 2. Current Orderbook
 registerOrderbookTool(
   "get_orderbook",
   "Get the current Hyperliquid L2 orderbook snapshot for a coin. Returns bids, asks, mid price, and spread. Optionally specify depth (price levels per side). Requires Pro tier or higher for full depth.",
-  (coin, params) => client.hyperliquid.orderbook.get(coin, params),
+  (coin, params) => api().hyperliquid.orderbook.get(coin, params),
   CoinParam,
   normalizeHLCoin
 );
@@ -386,7 +401,7 @@ registerHistoryTool(
   "get_orderbook_history",
   "Get historical Hyperliquid orderbook snapshots (~1.2s resolution). Returns L2 snapshots with bids/asks over a time range. Data available from April 2023. Requires Pro tier.",
   (coin, params) =>
-    client.hyperliquid.orderbook.history(coin, params as any),
+    api().hyperliquid.orderbook.history(coin, params as any),
   CoinParam,
   normalizeHLCoin,
   { depth: DepthParam }
@@ -397,7 +412,7 @@ registerHistoryTool(
   "get_trades",
   "Get Hyperliquid trade/fill history for a coin over a time range. Returns price, size, side, timestamps, and user addresses. Data available from April 2023. Supports cursor pagination.",
   (coin, params) =>
-    client.hyperliquid.trades.list(coin, params as any),
+    api().hyperliquid.trades.list(coin, params as any),
   CoinParam,
   normalizeHLCoin
 );
@@ -407,7 +422,7 @@ registerCandleTool(
   "get_candles",
   "Get Hyperliquid OHLCV candle data for a coin. Intervals: 1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w (default 1h). Returns open, high, low, close, volume. Data available from April 2023.",
   (coin, params) =>
-    client.hyperliquid.candles.history(coin, params as any),
+    api().hyperliquid.candles.history(coin, params as any),
   CoinParam,
   normalizeHLCoin
 );
@@ -416,7 +431,7 @@ registerCandleTool(
 registerCurrentTool(
   "get_funding_current",
   "Get the current Hyperliquid funding rate for a coin. Returns the latest funding rate, premium, and timestamp.",
-  (coin) => client.hyperliquid.funding.current(coin),
+  (coin) => api().hyperliquid.funding.current(coin),
   CoinParam,
   normalizeHLCoin
 );
@@ -426,7 +441,7 @@ registerHistoryTool(
   "get_funding_history",
   "Get Hyperliquid funding rate history for a coin over a time range. Returns timestamped funding rates and premiums. Data available from May 2023.",
   (coin, params) =>
-    client.hyperliquid.funding.history(coin, params as any),
+    api().hyperliquid.funding.history(coin, params as any),
   CoinParam,
   normalizeHLCoin
 );
@@ -435,7 +450,7 @@ registerHistoryTool(
 registerCurrentTool(
   "get_open_interest",
   "Get the current Hyperliquid open interest for a coin. Returns OI, mark price, oracle price, and 24h volume.",
-  (coin) => client.hyperliquid.openInterest.current(coin),
+  (coin) => api().hyperliquid.openInterest.current(coin),
   CoinParam,
   normalizeHLCoin
 );
@@ -445,7 +460,7 @@ registerHistoryTool(
   "get_open_interest_history",
   "Get Hyperliquid open interest history for a coin over a time range. Returns timestamped OI snapshots with mark/oracle prices. Data available from May 2023.",
   (coin, params) =>
-    client.hyperliquid.openInterest.history(coin, params as any),
+    api().hyperliquid.openInterest.history(coin, params as any),
   CoinParam,
   normalizeHLCoin
 );
@@ -455,7 +470,7 @@ registerHistoryTool(
   "get_liquidations",
   "Get Hyperliquid liquidation history for a coin over a time range. Returns liquidated/liquidator addresses, price, size, side, and PnL. Data available from April 2023.",
   (coin, params) =>
-    client.hyperliquid.liquidations.history(coin, params as any),
+    api().hyperliquid.liquidations.history(coin, params as any),
   CoinParam,
   normalizeHLCoin
 );
@@ -468,14 +483,14 @@ registerHistoryTool(
 registerInstrumentsTool(
   "get_hip3_instruments",
   "List all available HIP-3 builder perp instruments on Hyperliquid. HIP-3 symbols are CASE-SENSITIVE (e.g. 'km:US500', 'km:TSLA'). Use this to discover valid symbols before querying HIP-3 data.",
-  () => client.hyperliquid.hip3.instruments.list()
+  () => api().hyperliquid.hip3.instruments.list()
 );
 
 // 12. HIP-3 Orderbook
 registerOrderbookTool(
   "get_hip3_orderbook",
   "Get the current HIP-3 orderbook snapshot. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns bids, asks, mid price. Requires Pro tier for full depth.",
-  (coin, params) => client.hyperliquid.hip3.orderbook.get(coin, params),
+  (coin, params) => api().hyperliquid.hip3.orderbook.get(coin, params),
   Hip3CoinParam,
   normalizeHip3Coin
 );
@@ -485,7 +500,7 @@ registerHistoryTool(
   "get_hip3_trades",
   "Get HIP-3 trade history. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns trades with price, size, side, and timestamps over a time range. Supports cursor pagination.",
   (coin, params) =>
-    client.hyperliquid.hip3.trades.list(coin, params as any),
+    api().hyperliquid.hip3.trades.list(coin, params as any),
   Hip3CoinParam,
   normalizeHip3Coin
 );
@@ -495,7 +510,7 @@ registerCandleTool(
   "get_hip3_candles",
   "Get HIP-3 OHLCV candle data. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Intervals: 1m to 1w (default 1h). Returns open, high, low, close, volume.",
   (coin, params) =>
-    client.hyperliquid.hip3.candles.history(coin, params as any),
+    api().hyperliquid.hip3.candles.history(coin, params as any),
   Hip3CoinParam,
   normalizeHip3Coin
 );
@@ -505,7 +520,7 @@ registerHistoryTool(
   "get_hip3_funding",
   "Get HIP-3 funding rate history. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns timestamped funding rates over a time range. Supports cursor pagination.",
   (coin, params) =>
-    client.hyperliquid.hip3.funding.history(coin, params as any),
+    api().hyperliquid.hip3.funding.history(coin, params as any),
   Hip3CoinParam,
   normalizeHip3Coin
 );
@@ -518,14 +533,14 @@ registerHistoryTool(
 registerInstrumentsTool(
   "get_lighter_instruments",
   "List all available Lighter.xyz instruments with market IDs, fees, size/price decimals, and active status. Use this to discover valid Lighter symbols.",
-  () => client.lighter.instruments.list()
+  () => api().lighter.instruments.list()
 );
 
 // 17. Lighter Orderbook
 registerOrderbookTool(
   "get_lighter_orderbook",
   "Get the current Lighter.xyz orderbook snapshot for a coin. Returns bids, asks, mid price, and spread. Optionally specify depth. Requires Pro tier for full depth.",
-  (coin, params) => client.lighter.orderbook.get(coin, params),
+  (coin, params) => api().lighter.orderbook.get(coin, params),
   LighterCoinParam,
   normalizeLighterCoin
 );
@@ -535,7 +550,7 @@ registerHistoryTool(
   "get_lighter_trades",
   "Get Lighter.xyz trade history for a coin over a time range. Returns price, size, side, and timestamps. Supports cursor pagination.",
   (coin, params) =>
-    client.lighter.trades.list(coin, params as any),
+    api().lighter.trades.list(coin, params as any),
   LighterCoinParam,
   normalizeLighterCoin
 );
@@ -545,7 +560,7 @@ registerCandleTool(
   "get_lighter_candles",
   "Get Lighter.xyz OHLCV candle data for a coin. Intervals: 1m to 1w (default 1h). Returns open, high, low, close, volume.",
   (coin, params) =>
-    client.lighter.candles.history(coin, params as any),
+    api().lighter.candles.history(coin, params as any),
   LighterCoinParam,
   normalizeLighterCoin
 );
@@ -555,7 +570,7 @@ registerHistoryTool(
   "get_lighter_funding",
   "Get Lighter.xyz funding rate history for a coin over a time range. Returns timestamped funding rates. Supports cursor pagination.",
   (coin, params) =>
-    client.lighter.funding.history(coin, params as any),
+    api().lighter.funding.history(coin, params as any),
   LighterCoinParam,
   normalizeLighterCoin
 );
@@ -580,7 +595,7 @@ registerTool(
   "Get the current system status for all exchanges and data types. Returns overall health (operational/degraded/outage), per-exchange status with latency, per-data-type completeness, and active incident count.",
   {},
   async () => {
-    const data = await client.dataQuality.status();
+    const data = await api().dataQuality.status();
     return formatResponse(data);
   }
 );
@@ -591,7 +606,7 @@ registerTool(
   "Get data coverage across all exchanges. Returns earliest/latest timestamps, total records, symbol count, resolution, lag, and completeness per data type per exchange.",
   {},
   async () => {
-    const data = await client.dataQuality.coverage();
+    const data = await api().dataQuality.coverage();
     return formatResponse(data);
   }
 );
@@ -610,7 +625,7 @@ registerTool(
     const options: Record<string, unknown> = {};
     if (params.from != null) options.from = toUnixMs(params.from);
     if (params.to != null) options.to = toUnixMs(params.to);
-    const data = await client.dataQuality.symbolCoverage(
+    const data = await api().dataQuality.symbolCoverage(
       params.exchange,
       params.symbol,
       Object.keys(options).length > 0 ? options as any : undefined
@@ -637,7 +652,7 @@ registerTool(
     if (params.since != null) sdkParams.since = typeof params.since === "string" ? toUnixMs(params.since) : params.since;
     if (params.limit) sdkParams.limit = params.limit;
     if (params.offset) sdkParams.offset = params.offset;
-    const data = await client.dataQuality.listIncidents(
+    const data = await api().dataQuality.listIncidents(
       Object.keys(sdkParams).length > 0 ? sdkParams as any : undefined
     );
     return formatResponse(data);
@@ -650,7 +665,7 @@ registerTool(
   "Get current latency metrics for all exchanges. Returns WebSocket latency (current, 1h avg, 24h avg), REST API latency, and data freshness lag per data type (orderbook, fills, funding, OI).",
   {},
   async () => {
-    const data = await client.dataQuality.latency();
+    const data = await api().dataQuality.latency();
     return formatResponse(data);
   }
 );
@@ -667,7 +682,7 @@ registerTool(
     const sdkParams: Record<string, unknown> = {};
     if (params.year) sdkParams.year = params.year;
     if (params.month) sdkParams.month = params.month;
-    const data = await client.dataQuality.sla(
+    const data = await api().dataQuality.sla(
       Object.keys(sdkParams).length > 0 ? sdkParams as any : undefined
     );
     return formatResponse(data);
