@@ -104,6 +104,19 @@ Some endpoints require a paid plan. The server returns clear error messages with
 
 Upgrade at [0xarchive.io/pricing](https://0xarchive.io/pricing).
 
+## Tool Annotations
+
+All 26 tools carry MCP annotations so clients can reason about safety and retry behavior:
+
+| Annotation | Value | Meaning |
+|------------|-------|---------|
+| `readOnlyHint` | `true` | Tools never modify data |
+| `destructiveHint` | `false` | No destructive side effects |
+| `idempotentHint` | `true` | Safe to retry on failure |
+| `openWorldHint` | `true` | Queries an external API |
+
+All tools also declare an `outputSchema` so clients can validate structured responses.
+
 ## Smart Defaults
 
 - **Time range**: Defaults to last 24 hours if not specified
