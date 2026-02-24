@@ -26,7 +26,7 @@ const MISSING_KEY_MESSAGE =
   `1. Sign up at https://0xarchive.io and go to Dashboard to create an API key\n` +
   `2. Reconfigure the MCP server with your key:\n\n` +
   `   claude mcp remove 0xarchive\n` +
-  `   claude mcp add 0xarchive -s user -t stdio -e OXARCHIVE_API_KEY=0xa_your_key -- node /path/to/build/index.js\n\n` +
+  `   claude mcp add 0xarchive -s user -t stdio -e OXARCHIVE_API_KEY=0xa_your_api_key -- node /path/to/build/index.js\n\n` +
   `3. Start a new Claude Code session\n\n` +
   `Free tier includes BTC historical data. Upgrade at https://0xarchive.io/pricing for all coins.`;
 
@@ -85,6 +85,11 @@ const IntervalParam = z
   .enum(["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"])
   .optional()
   .describe("Candle interval (default '1h')");
+
+const AggregationIntervalParam = z
+  .enum(["5m", "15m", "30m", "1h", "4h", "1d"])
+  .optional()
+  .describe("Aggregation interval. Omit for raw ~1 min data.");
 
 const HistoryParams = {
   start: TimestampParam.describe(
@@ -423,6 +428,15 @@ registerInstrumentsTool(
   () => api().hyperliquid.instruments.list()
 );
 
+// 1b. Single Instrument
+registerCurrentTool(
+  "get_instrument",
+  "Get details for a single Hyperliquid instrument by coin symbol. Returns leverage, decimals, and active status.",
+  (coin) => api().hyperliquid.instruments.get(coin),
+  CoinParam,
+  normalizeHLCoin
+);
+
 // 2. Current Orderbook
 registerOrderbookTool(
   "get_orderbook",
@@ -475,11 +489,12 @@ registerCurrentTool(
 // 7. Funding History
 registerHistoryTool(
   "get_funding_history",
-  "Get Hyperliquid funding rate history for a coin over a time range. Returns timestamped funding rates and premiums. Data available from May 2023.",
+  "Get Hyperliquid funding rate history for a coin over a time range. Returns timestamped funding rates and premiums. Data available from May 2023. Supports aggregation intervals (5m, 15m, 30m, 1h, 4h, 1d).",
   (coin, params) =>
     api().hyperliquid.funding.history(coin, params as any),
   CoinParam,
-  normalizeHLCoin
+  normalizeHLCoin,
+  { interval: AggregationIntervalParam }
 );
 
 // 8. Open Interest Current
@@ -494,35 +509,109 @@ registerCurrentTool(
 // 9. Open Interest History
 registerHistoryTool(
   "get_open_interest_history",
-  "Get Hyperliquid open interest history for a coin over a time range. Returns timestamped OI snapshots with mark/oracle prices. Data available from May 2023.",
+  "Get Hyperliquid open interest history for a coin over a time range. Returns timestamped OI snapshots with mark/oracle prices. Data available from May 2023. Supports aggregation intervals (5m, 15m, 30m, 1h, 4h, 1d).",
   (coin, params) =>
     api().hyperliquid.openInterest.history(coin, params as any),
   CoinParam,
-  normalizeHLCoin
+  normalizeHLCoin,
+  { interval: AggregationIntervalParam }
 );
 
 // 10. Liquidations
 registerHistoryTool(
   "get_liquidations",
-  "Get Hyperliquid liquidation history for a coin over a time range. Returns liquidated/liquidator addresses, price, size, side, and PnL. Data available from April 2023.",
+  "Get Hyperliquid liquidation history for a coin over a time range. Returns liquidated/liquidator addresses, price, size, side, and PnL. Data available from May 2025.",
   (coin, params) =>
     api().hyperliquid.liquidations.history(coin, params as any),
   CoinParam,
   normalizeHLCoin
 );
 
+// 11. Liquidations by User
+registerTool(
+  "get_liquidations_by_user",
+  "Get Hyperliquid liquidation history for a specific user address. Returns liquidations where the user was either liquidated or was the liquidator. Filter by coin optionally.",
+  {
+    address: z.string().describe("User's wallet address (e.g., '0x1234...')"),
+    ...HistoryParams,
+    coin: CoinParam.optional().describe("Optional coin filter"),
+  },
+  ListOutputSchema,
+  async (params) => {
+    const { address, start, end, limit, cursor, coin } = params;
+    const timeRange = resolveTimeRange(start, end);
+    const sdkParams: Record<string, unknown> = {
+      ...timeRange,
+      limit: resolveLimit(limit),
+    };
+    if (cursor) sdkParams.cursor = cursor;
+    if (coin) sdkParams.coin = coin.toUpperCase();
+    const result = await api().hyperliquid.liquidations.byUser(address, sdkParams as any);
+    return formatCursorResponse(result);
+  }
+);
+
+// 12. Liquidation Volume
+registerHistoryTool(
+  "get_liquidation_volume",
+  "Get aggregated liquidation volume for a coin in time-bucketed intervals. Returns total, long, and short USD volumes. Data available from May 2025.",
+  (coin, params) =>
+    api().hyperliquid.liquidations.volume(coin, params as any),
+  CoinParam,
+  normalizeHLCoin,
+  { interval: z.enum(["5m", "15m", "30m", "1h", "4h", "1d"]).optional().describe("Aggregation interval: '5m', '15m', '30m', '1h', '4h', '1d'. Default '1h'") }
+);
+
+// 12. Freshness
+registerCurrentTool(
+  "get_freshness",
+  "Get data freshness for a coin across all data types (orderbook, trades, funding, OI, liquidations). Shows when each data type was last updated and current lag.",
+  (coin) => api().hyperliquid.freshness(coin),
+  CoinParam,
+  normalizeHLCoin
+);
+
+// 13. Summary
+registerCurrentTool(
+  "get_summary",
+  "Get combined market summary for a coin in a single call. Returns mark price, oracle price, funding rate, open interest, 24h volume, and 24h liquidation volumes.",
+  (coin) => api().hyperliquid.summary(coin),
+  CoinParam,
+  normalizeHLCoin
+);
+
+// 14. Price History
+registerHistoryTool(
+  "get_price_history",
+  "Get mark/oracle price history for a coin over a time range. Returns mark_price, oracle_price, and mid_price at each timestamp. Supports aggregation intervals. Data available from May 2023.",
+  (coin, params) =>
+    api().hyperliquid.priceHistory(coin, params as any),
+  CoinParam,
+  normalizeHLCoin,
+  { interval: z.enum(["5m", "15m", "30m", "1h", "4h", "1d"]).optional().describe("Aggregation interval: '5m', '15m', '30m', '1h', '4h', '1d'. Default '1h'") }
+);
+
 // ---------------------------------------------------------------------------
 // Tool Registration — HIP-3
 // ---------------------------------------------------------------------------
 
-// 11. HIP-3 Instruments
+// 15. HIP-3 Instruments
 registerInstrumentsTool(
   "get_hip3_instruments",
   "List all available HIP-3 builder perp instruments on Hyperliquid. HIP-3 symbols are CASE-SENSITIVE (e.g. 'km:US500', 'km:TSLA'). Use this to discover valid symbols before querying HIP-3 data.",
   () => api().hyperliquid.hip3.instruments.list()
 );
 
-// 12. HIP-3 Orderbook
+// 15b. HIP-3 Single Instrument
+registerCurrentTool(
+  "get_hip3_instrument",
+  "Get details for a single HIP-3 instrument. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns mark price, open interest, mid price, and latest timestamp.",
+  (coin) => api().hyperliquid.hip3.instruments.get(coin),
+  Hip3CoinParam,
+  normalizeHip3Coin
+);
+
+// 16. HIP-3 Orderbook
 registerOrderbookTool(
   "get_hip3_orderbook",
   "Get the current HIP-3 orderbook snapshot. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns bids, asks, mid price. Requires Pro tier for full depth.",
@@ -531,7 +620,18 @@ registerOrderbookTool(
   normalizeHip3Coin
 );
 
-// 13. HIP-3 Trades
+// HIP-3 Orderbook History
+registerHistoryTool(
+  "get_hip3_orderbook_history",
+  "Get historical HIP-3 orderbook snapshots. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns L2 snapshots with bids/asks over a time range. Requires Pro tier.",
+  (coin, params) =>
+    api().hyperliquid.hip3.orderbook.history(coin, params as any),
+  Hip3CoinParam,
+  normalizeHip3Coin,
+  { depth: DepthParam }
+);
+
+// 17. HIP-3 Trades
 registerHistoryTool(
   "get_hip3_trades",
   "Get HIP-3 trade history. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns trades with price, size, side, and timestamps over a time range. Supports cursor pagination.",
@@ -541,7 +641,25 @@ registerHistoryTool(
   normalizeHip3Coin
 );
 
-// 14. HIP-3 Candles
+// HIP-3 Recent Trades
+registerTool(
+  "get_hip3_trades_recent",
+  "Get most recent HIP-3 trades. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns the latest trades without needing a time range.",
+  {
+    coin: Hip3CoinParam,
+    limit: LimitParam,
+  },
+  ListOutputSchema,
+  async (params) => {
+    const data = await api().hyperliquid.hip3.trades.recent(
+      normalizeHip3Coin(params.coin),
+      params.limit
+    );
+    return formatResponse(data);
+  }
+);
+
+// 18. HIP-3 Candles
 registerCandleTool(
   "get_hip3_candles",
   "Get HIP-3 OHLCV candle data. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Intervals: 1m to 1w (default 1h). Returns open, high, low, close, volume.",
@@ -551,28 +669,67 @@ registerCandleTool(
   normalizeHip3Coin
 );
 
-// 15. HIP-3 Funding
+// HIP-3 Funding Current
+registerCurrentTool(
+  "get_hip3_funding_current",
+  "Get the current HIP-3 funding rate for a coin. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns the latest funding rate and timestamp.",
+  (coin) => api().hyperliquid.hip3.funding.current(coin),
+  Hip3CoinParam,
+  normalizeHip3Coin
+);
+
+// 19. HIP-3 Funding History
 registerHistoryTool(
   "get_hip3_funding",
-  "Get HIP-3 funding rate history. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns timestamped funding rates over a time range. Supports cursor pagination.",
+  "Get HIP-3 funding rate history. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns timestamped funding rates over a time range. Supports cursor pagination and aggregation intervals (5m, 15m, 30m, 1h, 4h, 1d).",
   (coin, params) =>
     api().hyperliquid.hip3.funding.history(coin, params as any),
   Hip3CoinParam,
+  normalizeHip3Coin,
+  { interval: AggregationIntervalParam }
+);
+
+// 20. HIP-3 Open Interest Current
+registerCurrentTool(
+  "get_hip3_open_interest",
+  "Get the current HIP-3 open interest for a coin. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns OI, mark price, and oracle price.",
+  (coin) => api().hyperliquid.hip3.openInterest.current(coin),
+  Hip3CoinParam,
   normalizeHip3Coin
+);
+
+// 21. HIP-3 Open Interest History
+registerHistoryTool(
+  "get_hip3_open_interest_history",
+  "Get HIP-3 open interest history over a time range. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns timestamped OI snapshots.",
+  (coin, params) =>
+    api().hyperliquid.hip3.openInterest.history(coin, params as any),
+  Hip3CoinParam,
+  normalizeHip3Coin,
+  { interval: AggregationIntervalParam }
 );
 
 // ---------------------------------------------------------------------------
 // Tool Registration — Lighter.xyz
 // ---------------------------------------------------------------------------
 
-// 16. Lighter Instruments
+// 22. Lighter Instruments
 registerInstrumentsTool(
   "get_lighter_instruments",
   "List all available Lighter.xyz instruments with market IDs, fees, size/price decimals, and active status. Use this to discover valid Lighter symbols.",
   () => api().lighter.instruments.list()
 );
 
-// 17. Lighter Orderbook
+// 22b. Lighter Single Instrument
+registerCurrentTool(
+  "get_lighter_instrument",
+  "Get details for a single Lighter.xyz instrument by coin symbol. Returns market ID, fees, size/price decimals, and active status.",
+  (coin) => api().lighter.instruments.get(coin),
+  LighterCoinParam,
+  normalizeLighterCoin
+);
+
+// 23. Lighter Orderbook
 registerOrderbookTool(
   "get_lighter_orderbook",
   "Get the current Lighter.xyz orderbook snapshot for a coin. Returns bids, asks, mid price, and spread. Optionally specify depth. Requires Pro tier for full depth.",
@@ -581,7 +738,24 @@ registerOrderbookTool(
   normalizeLighterCoin
 );
 
-// 18. Lighter Trades
+// Lighter Orderbook History
+registerHistoryTool(
+  "get_lighter_orderbook_history",
+  "Get historical Lighter.xyz orderbook snapshots. Returns L2 snapshots with bids/asks over a time range. Supports granularity levels: checkpoint (default), 30s, 10s, 1s, tick.",
+  (coin, params) =>
+    api().lighter.orderbook.history(coin, params as any),
+  LighterCoinParam,
+  normalizeLighterCoin,
+  {
+    depth: DepthParam,
+    granularity: z
+      .enum(["checkpoint", "30s", "10s", "1s", "tick"])
+      .optional()
+      .describe("Orderbook resolution: 'checkpoint' (default), '30s', '10s', '1s', 'tick' (Enterprise)"),
+  }
+);
+
+// 24. Lighter Trades
 registerHistoryTool(
   "get_lighter_trades",
   "Get Lighter.xyz trade history for a coin over a time range. Returns price, size, side, and timestamps. Supports cursor pagination.",
@@ -591,7 +765,25 @@ registerHistoryTool(
   normalizeLighterCoin
 );
 
-// 19. Lighter Candles
+// Lighter Recent Trades
+registerTool(
+  "get_lighter_trades_recent",
+  "Get most recent Lighter.xyz trades for a coin. Returns the latest trades without needing a time range.",
+  {
+    coin: LighterCoinParam,
+    limit: LimitParam,
+  },
+  ListOutputSchema,
+  async (params) => {
+    const data = await api().lighter.trades.recent(
+      normalizeLighterCoin(params.coin),
+      params.limit
+    );
+    return formatResponse(data);
+  }
+);
+
+// 25. Lighter Candles
 registerCandleTool(
   "get_lighter_candles",
   "Get Lighter.xyz OHLCV candle data for a coin. Intervals: 1m to 1w (default 1h). Returns open, high, low, close, volume.",
@@ -601,14 +793,102 @@ registerCandleTool(
   normalizeLighterCoin
 );
 
-// 20. Lighter Funding
+// Lighter Funding Current
+registerCurrentTool(
+  "get_lighter_funding_current",
+  "Get the current Lighter.xyz funding rate for a coin. Returns the latest funding rate and timestamp.",
+  (coin) => api().lighter.funding.current(coin),
+  LighterCoinParam,
+  normalizeLighterCoin
+);
+
+// 26. Lighter Funding History
 registerHistoryTool(
   "get_lighter_funding",
-  "Get Lighter.xyz funding rate history for a coin over a time range. Returns timestamped funding rates. Supports cursor pagination.",
+  "Get Lighter.xyz funding rate history for a coin over a time range. Returns timestamped funding rates. Supports cursor pagination and aggregation intervals (5m, 15m, 30m, 1h, 4h, 1d).",
   (coin, params) =>
     api().lighter.funding.history(coin, params as any),
   LighterCoinParam,
+  normalizeLighterCoin,
+  { interval: AggregationIntervalParam }
+);
+
+// 27. Lighter Open Interest Current
+registerCurrentTool(
+  "get_lighter_open_interest",
+  "Get the current Lighter.xyz open interest for a coin. Returns OI, mark price, and oracle price.",
+  (coin) => api().lighter.openInterest.current(coin),
+  LighterCoinParam,
   normalizeLighterCoin
+);
+
+// 28. Lighter Open Interest History
+registerHistoryTool(
+  "get_lighter_open_interest_history",
+  "Get Lighter.xyz open interest history for a coin over a time range. Returns timestamped OI snapshots.",
+  (coin, params) =>
+    api().lighter.openInterest.history(coin, params as any),
+  LighterCoinParam,
+  normalizeLighterCoin,
+  { interval: AggregationIntervalParam }
+);
+
+// Lighter Freshness
+registerCurrentTool(
+  "get_lighter_freshness",
+  "Get data freshness for a Lighter.xyz coin across all data types (orderbook, trades, funding, OI). Shows when each data type was last updated and current lag.",
+  (coin) => api().lighter.freshness(coin),
+  LighterCoinParam,
+  normalizeLighterCoin
+);
+
+// Lighter Summary
+registerCurrentTool(
+  "get_lighter_summary",
+  "Get combined Lighter.xyz market summary for a coin in a single call. Returns mark price, oracle price, funding rate, and open interest.",
+  (coin) => api().lighter.summary(coin),
+  LighterCoinParam,
+  normalizeLighterCoin
+);
+
+// Lighter Price History
+registerHistoryTool(
+  "get_lighter_price_history",
+  "Get mark/oracle price history for a Lighter.xyz coin over a time range. Returns mark_price, oracle_price, and mid_price at each timestamp. Supports aggregation intervals.",
+  (coin, params) =>
+    api().lighter.priceHistory(coin, params as any),
+  LighterCoinParam,
+  normalizeLighterCoin,
+  { interval: z.enum(["5m", "15m", "30m", "1h", "4h", "1d"]).optional().describe("Aggregation interval: '5m', '15m', '30m', '1h', '4h', '1d'. Default '1h'") }
+);
+
+// HIP-3 Freshness
+registerCurrentTool(
+  "get_hip3_freshness",
+  "Get data freshness for a HIP-3 coin across all data types (orderbook, trades, funding, OI). Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Shows when each data type was last updated and current lag.",
+  (coin) => api().hyperliquid.hip3.freshness(coin),
+  Hip3CoinParam,
+  normalizeHip3Coin
+);
+
+// HIP-3 Summary
+registerCurrentTool(
+  "get_hip3_summary",
+  "Get combined HIP-3 market summary for a coin in a single call. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns mark price, oracle price, mid price, funding rate, and open interest.",
+  (coin) => api().hyperliquid.hip3.summary(coin),
+  Hip3CoinParam,
+  normalizeHip3Coin
+);
+
+// HIP-3 Price History
+registerHistoryTool(
+  "get_hip3_price_history",
+  "Get mark/oracle/mid price history for a HIP-3 coin over a time range. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns mark_price, oracle_price, and mid_price at each timestamp. Supports aggregation intervals.",
+  (coin, params) =>
+    api().hyperliquid.hip3.priceHistory(coin, params as any),
+  Hip3CoinParam,
+  normalizeHip3Coin,
+  { interval: z.enum(["5m", "15m", "30m", "1h", "4h", "1d"]).optional().describe("Aggregation interval: '5m', '15m', '30m', '1h', '4h', '1d'. Default '1h'") }
 );
 
 // ---------------------------------------------------------------------------
@@ -625,7 +905,7 @@ const IncidentStatusParam = z
   .optional()
   .describe("Filter incidents by status");
 
-// 21. System Status
+// 29. System Status
 registerTool(
   "get_data_quality_status",
   "Get the current system status for all exchanges and data types. Returns overall health (operational/degraded/outage), per-exchange status with latency, per-data-type completeness, and active incident count.",
@@ -637,7 +917,7 @@ registerTool(
   }
 );
 
-// 22. Coverage Overview
+// 30. Coverage Overview
 registerTool(
   "get_data_coverage",
   "Get data coverage across all exchanges. Returns earliest/latest timestamps, total records, symbol count, resolution, lag, and completeness per data type per exchange.",
@@ -649,7 +929,21 @@ registerTool(
   }
 );
 
-// 23. Symbol Coverage
+// Exchange Coverage
+registerTool(
+  "get_exchange_coverage",
+  "Get data coverage for a specific exchange. Returns earliest/latest timestamps, total records, symbol count, resolution, and completeness per data type.",
+  {
+    exchange: z.enum(["hyperliquid", "lighter", "hip3"]).describe("Exchange name"),
+  },
+  ObjectOutputSchema,
+  async (params) => {
+    const data = await api().dataQuality.exchangeCoverage(params.exchange);
+    return formatResponse(data);
+  }
+);
+
+// 31. Symbol Coverage
 registerTool(
   "get_symbol_coverage",
   "Get detailed data coverage for a specific symbol on an exchange. Returns per-data-type coverage with earliest/latest, total records, completeness, detected data gaps, and cadence metrics.",
@@ -673,7 +967,7 @@ registerTool(
   }
 );
 
-// 24. Incidents
+// 32. Incidents
 registerTool(
   "get_data_incidents",
   "List data quality incidents (outages, gaps, degradations). Filter by status, exchange, or time. Returns incident details including severity, affected data types, duration, root cause, and resolution.",
@@ -684,7 +978,7 @@ registerTool(
     limit: z.number().optional().describe("Max results (default 20, max 100)"),
     offset: z.number().optional().describe("Pagination offset"),
   },
-  ListOutputSchema,
+  ObjectOutputSchema,
   async (params) => {
     const sdkParams: Record<string, unknown> = {};
     if (params.status) sdkParams.status = params.status;
@@ -699,7 +993,21 @@ registerTool(
   }
 );
 
-// 25. Latency
+// Incident by ID
+registerTool(
+  "get_incident",
+  "Get a specific data quality incident by its ID. Returns full incident details including severity, affected data types, root cause, resolution, and timeline.",
+  {
+    id: z.string().describe("Incident ID (e.g., 'INC-2026-001')"),
+  },
+  ObjectOutputSchema,
+  async (params) => {
+    const data = await api().dataQuality.getIncident(params.id);
+    return formatResponse(data);
+  }
+);
+
+// 33. Latency
 registerTool(
   "get_data_latency",
   "Get current latency metrics for all exchanges. Returns WebSocket latency (current, 1h avg, 24h avg), REST API latency, and data freshness lag per data type (orderbook, fills, funding, OI).",
@@ -711,7 +1019,7 @@ registerTool(
   }
 );
 
-// 26. SLA
+// 34. SLA
 registerTool(
   "get_data_sla",
   "Get SLA compliance report for a given month. Returns uptime, data completeness, API latency P99 — each with target vs actual and met/missed status. Also shows incident count and total downtime.",
