@@ -166,7 +166,7 @@ function formatError(error: unknown): McpContent & { isError: true } {
           `This endpoint may require a higher tier. Pricing:\n` +
           `  - Build: $49/mo — REST API, 25 WS subs, 50x replay\n` +
           `  - Pro: $199/mo — Full orderbook depth, 100 WS subs, 100x replay\n` +
-          `  - Enterprise: $499/mo — Tick data, 200 WS subs, 1000x replay\n\n` +
+          `  - Enterprise: Custom — Tick data, 200 WS subs, 1000x replay\n\n` +
           `Upgrade at https://0xarchive.io/pricing`;
         break;
 
@@ -1063,3 +1063,4 @@ main().catch((error) => {
   console.error("Fatal error:", error);
   process.exit(1);
 });
+
