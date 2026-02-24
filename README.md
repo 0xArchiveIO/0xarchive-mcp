@@ -123,7 +123,7 @@ Some endpoints require a paid plan. The server returns clear error messages with
 | Free | $0/mo | BTC-only historical data |
 | Build | $49/mo | All coins, REST API, 25 WS subs |
 | Pro | $199/mo | Full orderbook depth, 100 WS subs |
-| Enterprise | $499/mo | Tick data, 200 WS subs |
+| Enterprise | Custom | Tick data, 200 WS subs |
 
 Upgrade at [0xarchive.io/pricing](https://0xarchive.io/pricing).
 
@@ -163,3 +163,4 @@ Once configured, ask Claude things like:
 - "Are there any data quality issues right now?"
 - "Show me the SLA report for January 2026"
 - "What's the data latency across exchanges?"
+
