@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
-    "@0xarchive/sdk": "^0.8.2",
+    "@0xarchive/sdk": "^0.9.1",
     "zod": "^3.23.0"
   },
   "devDependencies": {

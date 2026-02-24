@@ -22,7 +22,7 @@ Sign up at [0xarchive.io](https://0xarchive.io) and generate an API key in Dashb
 ### 3. Add to Claude Code
 
 ```bash
-claude mcp add 0xarchive -s user -t stdio -e OXARCHIVE_API_KEY=0xa_your_key_here -- node /absolute/path/to/0xarchive-mcp/build/index.js
+claude mcp add 0xarchive -s user -t stdio -e OXARCHIVE_API_KEY=0xa_your_api_key -- node /absolute/path/to/0xarchive-mcp/build/index.js
 ```
 
 ### 4. Add to Claude Desktop
@@ -36,14 +36,14 @@ Add to your `claude_desktop_config.json`:
       "command": "node",
       "args": ["/absolute/path/to/0xarchive-mcp/build/index.js"],
       "env": {
-        "OXARCHIVE_API_KEY": "0xa_your_key_here"
+        "OXARCHIVE_API_KEY": "0xa_your_api_key"
       }
     }
   }
 }
 ```
 
-## Available Tools (26)
+## Available Tools (49)
 
 ### Hyperliquid
 
@@ -59,6 +59,11 @@ Add to your `claude_desktop_config.json`:
 | `get_open_interest` | Current open interest |
 | `get_open_interest_history` | Open interest history |
 | `get_liquidations` | Liquidation history |
+| `get_liquidations_by_user` | Liquidations for a specific user address |
+| `get_liquidation_volume` | Aggregated liquidation volume (USD buckets) |
+| `get_freshness` | Per-coin data freshness and lag |
+| `get_summary` | Combined market summary (price, funding, OI, volume, liquidations) |
+| `get_price_history` | Mark/oracle/mid price history |
 
 ### HIP-3 (Builder Perps)
 
@@ -66,9 +71,17 @@ Add to your `claude_desktop_config.json`:
 |------|-------------|
 | `get_hip3_instruments` | List HIP-3 instruments |
 | `get_hip3_orderbook` | Current HIP-3 orderbook |
+| `get_hip3_orderbook_history` | Historical HIP-3 orderbook snapshots |
 | `get_hip3_trades` | HIP-3 trade history |
+| `get_hip3_trades_recent` | Most recent HIP-3 trades |
 | `get_hip3_candles` | HIP-3 candle data |
+| `get_hip3_funding_current` | Current HIP-3 funding rate |
 | `get_hip3_funding` | HIP-3 funding history |
+| `get_hip3_open_interest` | Current HIP-3 open interest |
+| `get_hip3_open_interest_history` | HIP-3 open interest history |
+| `get_hip3_freshness` | Per-coin HIP-3 data freshness and lag |
+| `get_hip3_summary` | Combined HIP-3 market summary |
+| `get_hip3_price_history` | HIP-3 mark/oracle/mid price history |
 
 ### Lighter.xyz
 
@@ -76,9 +89,17 @@ Add to your `claude_desktop_config.json`:
 |------|-------------|
 | `get_lighter_instruments` | List Lighter instruments |
 | `get_lighter_orderbook` | Current Lighter orderbook |
+| `get_lighter_orderbook_history` | Historical Lighter orderbook snapshots |
 | `get_lighter_trades` | Lighter trade history |
+| `get_lighter_trades_recent` | Most recent Lighter trades |
 | `get_lighter_candles` | Lighter candle data |
+| `get_lighter_funding_current` | Current Lighter funding rate |
 | `get_lighter_funding` | Lighter funding history |
+| `get_lighter_open_interest` | Current Lighter open interest |
+| `get_lighter_open_interest_history` | Lighter open interest history |
+| `get_lighter_freshness` | Per-coin Lighter data freshness and lag |
+| `get_lighter_summary` | Combined Lighter market summary |
+| `get_lighter_price_history` | Lighter mark/oracle price history |
 
 ### Data Quality
 
@@ -86,8 +107,10 @@ Add to your `claude_desktop_config.json`:
 |------|-------------|
 | `get_data_quality_status` | System health across all exchanges |
 | `get_data_coverage` | Data coverage (earliest/latest, records, completeness) |
+| `get_exchange_coverage` | Coverage for a specific exchange |
 | `get_symbol_coverage` | Per-symbol coverage with gap detection |
 | `get_data_incidents` | Outage and degradation history |
+| `get_incident` | Single incident details by ID |
 | `get_data_latency` | WebSocket/REST latency and data freshness |
 | `get_data_sla` | Monthly SLA compliance report |
 
@@ -106,7 +129,7 @@ Upgrade at [0xarchive.io/pricing](https://0xarchive.io/pricing).
 
 ## Tool Annotations
 
-All 26 tools carry MCP annotations so clients can reason about safety and retry behavior:
+All 49 tools carry MCP annotations so clients can reason about safety and retry behavior:
 
 | Annotation | Value | Meaning |
 |------------|-------|---------|
