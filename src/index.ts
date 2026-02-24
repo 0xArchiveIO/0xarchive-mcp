@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import "dotenv/config";
+
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { OxArchive, OxArchiveError } from "@0xarchive/sdk";
@@ -9,7 +11,8 @@ import { z, type ZodRawShape } from "zod";
 // A. API Key Validation + Client Setup
 // ---------------------------------------------------------------------------
 
-const apiKey = process.env.OXARCHIVE_API_KEY;
+// Support both OXARCHIVE_API_KEY and OX_ARCHIVE_API_KEY (dotenv uses underscores)
+const apiKey = process.env.OXARCHIVE_API_KEY || process.env.OX_ARCHIVE_API_KEY;
 if (!apiKey) {
   console.error("Warning: OXARCHIVE_API_KEY not set. Server will start but all tools will return setup instructions.");
 }
@@ -511,6 +514,72 @@ registerHistoryTool(
   normalizeHLCoin
 );
 
+// 10b. Liquidation Volume
+registerHistoryTool(
+  "get_liquidation_volume",
+  "Get pre-aggregated Hyperliquid liquidation volume in time buckets. Returns total, long, and short USD volumes per interval. Much more efficient than individual liquidation records.",
+  (coin, params) =>
+    api().hyperliquid.liquidations.volume(coin, params as any),
+  CoinParam,
+  normalizeHLCoin,
+  {
+    interval: z.enum(["5m", "15m", "30m", "1h", "4h", "1d"]).optional().describe("Aggregation interval (default 1h)")
+  }
+);
+
+// 10c. Liquidations by User
+registerHistoryTool(
+  "get_liquidations_by_user",
+  "Get Hyperliquid liquidation history for a specific user address. Returns liquidated positions with price, size, side, and PnL.",
+  (coin, params) => {
+    const sdkParams: Record<string, unknown> = { coin };
+    if (params.user) sdkParams.user = params.user;
+    if (params.side) sdkParams.side = params.side;
+    return api().hyperliquid.liquidations.byUser(params.user as string, sdkParams as any);
+  },
+  CoinParam,
+  normalizeHLCoin,
+  {
+    user: z.string().describe("User wallet address (0x...)"),
+    side: z.enum(["long", "short"]).optional().describe("Filter by position side")
+  }
+);
+
+// 10d. Freshness
+registerTool(
+  "get_freshness",
+  "Get Hyperliquid data freshness - when each data type (orderbook, trades, funding, OI) was last updated. Useful for verifying data recency.",
+  { coin: CoinParam },
+  ObjectOutputSchema,
+  async (params) => {
+    const data = await api().hyperliquid.freshness(params.coin);
+    return formatResponse(data);
+  }
+);
+
+// 10e. Summary
+registerTool(
+  "get_summary",
+  "Get Hyperliquid combined market snapshot. Returns mark price, oracle price, funding rate, open interest, 24h volume, and 24h liquidation volumes (total, long, short).",
+  { coin: CoinParam },
+  ObjectOutputSchema,
+  async (params) => {
+    const data = await api().hyperliquid.summary(params.coin);
+    return formatResponse(data);
+  }
+);
+
+// 10f. Price History
+registerHistoryTool(
+  "get_price_history",
+  "Get Hyperliquid price history (mark, oracle, mid) over time. Supports aggregation intervals. Data available from May 2023.",
+  (coin, params) =>
+    api().hyperliquid.priceHistory(coin, params as any),
+  CoinParam,
+  normalizeHLCoin,
+  { interval: IntervalParam }
+);
+
 // ---------------------------------------------------------------------------
 // Tool Registration — HIP-3
 // ---------------------------------------------------------------------------
@@ -561,6 +630,53 @@ registerHistoryTool(
   normalizeHip3Coin
 );
 
+// 15b. HIP-3 Freshness
+registerTool(
+  "get_hip3_freshness",
+  "Get HIP-3 data freshness - when each data type was last updated. Symbols are CASE-SENSITIVE (e.g. 'km:US500').",
+  { coin: Hip3CoinParam },
+  ObjectOutputSchema,
+  async (params) => {
+    const data = await api().hyperliquid.hip3.freshness(params.coin);
+    return formatResponse(data);
+  }
+);
+
+// 15c. HIP-3 Summary
+registerTool(
+  "get_hip3_summary",
+  "Get HIP-3 combined market snapshot. Returns mark price, mid price, open interest, funding rate, 24h volume. Symbols are CASE-SENSITIVE (e.g. 'km:US500').",
+  { coin: Hip3CoinParam },
+  ObjectOutputSchema,
+  async (params) => {
+    const data = await api().hyperliquid.hip3.summary(params.coin);
+    return formatResponse(data);
+  }
+);
+
+// 15d. HIP-3 Price History
+registerHistoryTool(
+  "get_hip3_price_history",
+  "Get HIP-3 price history (mark, oracle, mid). Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Intervals: 5m, 15m, 30m, 1h, 4h, 1d.",
+  (coin, params) =>
+    api().hyperliquid.hip3.priceHistory(coin, params as any),
+  Hip3CoinParam,
+  normalizeHip3Coin,
+  { interval: IntervalParam }
+);
+
+// 15e. HIP-3 Open Interest Current
+registerTool(
+  "get_hip3_open_interest",
+  "Get current HIP-3 open interest. Symbols are CASE-SENSITIVE (e.g. 'km:US500').",
+  { coin: Hip3CoinParam },
+  ObjectOutputSchema,
+  async (params) => {
+    const data = await api().hyperliquid.hip3.openInterest.current(params.coin);
+    return formatResponse(data);
+  }
+);
+
 // ---------------------------------------------------------------------------
 // Tool Registration — Lighter.xyz
 // ---------------------------------------------------------------------------
@@ -609,6 +725,41 @@ registerHistoryTool(
     api().lighter.funding.history(coin, params as any),
   LighterCoinParam,
   normalizeLighterCoin
+);
+
+// 20b. Lighter Freshness
+registerTool(
+  "get_lighter_freshness",
+  "Get Lighter.xyz data freshness - when each data type was last updated for a coin.",
+  { coin: LighterCoinParam },
+  ObjectOutputSchema,
+  async (params) => {
+    const data = await api().lighter.freshness(params.coin);
+    return formatResponse(data);
+  }
+);
+
+// 20c. Lighter Summary
+registerTool(
+  "get_lighter_summary",
+  "Get Lighter.xyz combined market snapshot. Returns mark price, mid price, open interest, funding rate, 24h volume.",
+  { coin: LighterCoinParam },
+  ObjectOutputSchema,
+  async (params) => {
+    const data = await api().lighter.summary(params.coin);
+    return formatResponse(data);
+  }
+);
+
+// 20d. Lighter Price History
+registerHistoryTool(
+  "get_lighter_price_history",
+  "Get Lighter.xyz price history (mark, oracle, mid). Intervals: 5m, 15m, 30m, 1h, 4h, 1d.",
+  (coin, params) =>
+    api().lighter.priceHistory(coin, params as any),
+  LighterCoinParam,
+  normalizeLighterCoin,
+  { interval: IntervalParam }
 );
 
 // ---------------------------------------------------------------------------
