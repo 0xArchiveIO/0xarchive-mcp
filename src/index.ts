@@ -23,11 +23,14 @@ function api(): OxArchive {
 
 const MISSING_KEY_MESSAGE =
   `API key not configured. To use 0xArchive tools:\n\n` +
-  `1. Sign up at https://0xarchive.io and go to Dashboard to create an API key\n` +
-  `2. Reconfigure the MCP server with your key:\n\n` +
+  `Option A — Browser signup:\n` +
+  `1. Sign up at https://0xarchive.io and go to Dashboard to create an API key\n\n` +
+  `Option B — Wallet signup (no browser needed):\n` +
+  `1. Use the web3_challenge and web3_signup tools to get a free API key with your Ethereum wallet\n\n` +
+  `Then reconfigure the MCP server with your key:\n\n` +
   `   claude mcp remove 0xarchive\n` +
   `   claude mcp add 0xarchive -s user -t stdio -e OXARCHIVE_API_KEY=0xa_your_api_key -- node /path/to/build/index.js\n\n` +
-  `3. Start a new Claude Code session\n\n` +
+  `Start a new Claude Code session after configuring.\n\n` +
   `Free tier includes BTC historical data. Upgrade at https://0xarchive.io/pricing for all coins.`;
 
 const server = new McpServer({
@@ -1036,6 +1039,226 @@ registerTool(
       Object.keys(sdkParams).length > 0 ? sdkParams as any : undefined
     );
     return formatResponse(data);
+  }
+);
+
+// ---------------------------------------------------------------------------
+// Tool Registration — Web3 Authentication
+// ---------------------------------------------------------------------------
+
+// Web3 tools are NOT read-only (they create accounts/keys)
+const AUTH_TOOL_ANNOTATIONS = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
+  openWorldHint: true,
+} as const;
+
+// Web3 challenge — works even without API key
+server.registerTool(
+  "web3_challenge",
+  {
+    description:
+      "Get a SIWE (Sign-In with Ethereum) challenge message for a wallet address. " +
+      "This is the first step to create a free API key using only a wallet — no browser or email required. " +
+      "The returned message must be signed with personal_sign (EIP-191), then submitted to web3_signup.",
+    inputSchema: {
+      address: z.string().describe("Ethereum wallet address (e.g., '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18')"),
+    },
+    outputSchema: ObjectOutputSchema,
+    annotations: AUTH_TOOL_ANNOTATIONS,
+  },
+  async (params: any) => {
+    // This tool works even without an API key — it calls the unauthenticated challenge endpoint
+    try {
+      if (client) {
+        const data = await api().web3.challenge(params.address);
+        return formatResponse(data);
+      }
+      // If no client, make a direct fetch
+      const response = await fetch("https://api.0xarchive.io/v1/auth/web3/challenge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: params.address }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return {
+          content: [{ type: "text" as const, text: `Error: ${data.error || "Challenge request failed"}` }],
+          isError: true,
+        };
+      }
+      return formatResponse(data);
+    } catch (error) {
+      return formatError(error);
+    }
+  }
+);
+
+// Web3 signup — works even without API key
+server.registerTool(
+  "web3_signup",
+  {
+    description:
+      "Create a free-tier 0xArchive account and get an API key using a signed SIWE message. " +
+      "Requires a challenge from web3_challenge signed with personal_sign (EIP-191). " +
+      "Returns an API key that can be used with all other tools.",
+    inputSchema: {
+      message: z.string().describe("The SIWE message from web3_challenge"),
+      signature: z.string().describe("Hex-encoded signature from personal_sign (0x-prefixed, 65 bytes)"),
+    },
+    outputSchema: ObjectOutputSchema,
+    annotations: AUTH_TOOL_ANNOTATIONS,
+  },
+  async (params: any) => {
+    try {
+      if (client) {
+        const data = await api().web3.signup(params.message, params.signature);
+        return formatResponse(data);
+      }
+      const response = await fetch("https://api.0xarchive.io/v1/web3/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: params.message, signature: params.signature }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return {
+          content: [{ type: "text" as const, text: `Error: ${data.error || "Signup failed"}` }],
+          isError: true,
+        };
+      }
+      return formatResponse(data);
+    } catch (error) {
+      return formatError(error);
+    }
+  }
+);
+
+// Web3 list keys — works even without API key
+server.registerTool(
+  "web3_list_keys",
+  {
+    description:
+      "List all API keys for a wallet. Requires a fresh SIWE challenge signed with personal_sign. " +
+      "Returns key IDs, prefixes, active status, and last usage timestamps.",
+    inputSchema: {
+      message: z.string().describe("The SIWE message from web3_challenge"),
+      signature: z.string().describe("Hex-encoded signature from personal_sign (0x-prefixed, 65 bytes)"),
+    },
+    outputSchema: ObjectOutputSchema,
+    annotations: AUTH_TOOL_ANNOTATIONS,
+  },
+  async (params: any) => {
+    try {
+      if (client) {
+        const data = await api().web3.listKeys(params.message, params.signature);
+        return formatResponse(data);
+      }
+      const response = await fetch("https://api.0xarchive.io/v1/web3/keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: params.message, signature: params.signature }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return {
+          content: [{ type: "text" as const, text: `Error: ${data.error || "List keys failed"}` }],
+          isError: true,
+        };
+      }
+      return formatResponse(data);
+    } catch (error) {
+      return formatError(error);
+    }
+  }
+);
+
+// Web3 revoke key — works even without API key
+server.registerTool(
+  "web3_revoke_key",
+  {
+    description:
+      "Revoke a specific API key. Requires a fresh SIWE challenge signed with personal_sign. " +
+      "Use web3_list_keys first to get the key_id to revoke.",
+    inputSchema: {
+      message: z.string().describe("The SIWE message from web3_challenge"),
+      signature: z.string().describe("Hex-encoded signature from personal_sign (0x-prefixed, 65 bytes)"),
+      key_id: z.string().describe("UUID of the API key to revoke (from web3_list_keys)"),
+    },
+    outputSchema: ObjectOutputSchema,
+    annotations: AUTH_TOOL_ANNOTATIONS,
+  },
+  async (params: any) => {
+    try {
+      if (client) {
+        const data = await api().web3.revokeKey(params.message, params.signature, params.key_id);
+        return formatResponse(data);
+      }
+      const response = await fetch("https://api.0xarchive.io/v1/web3/keys/revoke", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: params.message, signature: params.signature, key_id: params.key_id }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return {
+          content: [{ type: "text" as const, text: `Error: ${data.error || "Revoke key failed"}` }],
+          isError: true,
+        };
+      }
+      return formatResponse(data);
+    } catch (error) {
+      return formatError(error);
+    }
+  }
+);
+
+// Web3 subscribe — x402 payment flow, works without API key
+server.registerTool(
+  "web3_subscribe",
+  {
+    description:
+      "Subscribe to a paid tier (build or pro) using x402 USDC payment on Base. " +
+      "Two-step flow: (1) Call with just tier to get pricing and payment details (returns 402). " +
+      "(2) Call again with tier + payment_signature after signing the USDC transfer to complete the subscription. " +
+      "Returns an API key on success.",
+    inputSchema: {
+      tier: z.enum(["build", "pro"]).describe("Subscription tier: 'build' ($49/mo) or 'pro' ($199/mo)"),
+      payment_signature: z.string().optional().describe(
+        "x402 payment signature (from EIP-3009 signed USDC transfer). " +
+        "Omit on first call to get pricing. Provide on second call to complete payment."
+      ),
+    },
+    outputSchema: ObjectOutputSchema,
+    annotations: AUTH_TOOL_ANNOTATIONS,
+  },
+  async (params: any) => {
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (params.payment_signature) {
+        headers["payment-signature"] = params.payment_signature;
+      }
+      const response = await fetch("https://api.0xarchive.io/v1/web3/subscribe", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ tier: params.tier }),
+      });
+      const data = await response.json();
+      if (response.status === 402) {
+        // Expected first-step response with pricing info
+        return formatResponse(data);
+      }
+      if (!response.ok) {
+        return {
+          content: [{ type: "text" as const, text: `Error: ${data.error || "Subscribe failed"}` }],
+          isError: true,
+        };
+      }
+      return formatResponse(data);
+    } catch (error) {
+      return formatError(error);
+    }
   }
 );
 
