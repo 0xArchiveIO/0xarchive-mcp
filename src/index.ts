@@ -35,7 +35,7 @@ const MISSING_KEY_MESSAGE =
 
 const server = new McpServer({
   name: "0xarchive",
-  version: "1.0.0",
+  version: "1.3.0",
 });
 
 // All tools are read-only, idempotent API queries to an external service
@@ -1219,15 +1219,38 @@ server.registerTool(
   "web3_subscribe",
   {
     description:
-      "Subscribe to a paid tier (build or pro) using x402 USDC payment on Base. " +
-      "Two-step flow: (1) Call with just tier to get pricing and payment details (returns 402). " +
-      "(2) Call again with tier + payment_signature after signing the USDC transfer to complete the subscription. " +
-      "Returns an API key on success.",
+      "Subscribe to a paid tier (build or pro) using x402 USDC payment on Base.\n\n" +
+      "TWO-STEP FLOW:\n" +
+      "Step 1: Call with just tier (omit payment_signature) → returns 402 with payment details " +
+      "(amount in micro-USDC, pay_to treasury address, network, asset_address).\n" +
+      "Step 2: Sign a USDC EIP-3009 transferWithAuthorization, build the x402 v2 payment payload, " +
+      "base64-encode it, and call again with payment_signature.\n\n" +
+      "PAYMENT PAYLOAD FORMAT (x402 v2):\n" +
+      "The payment_signature must be a base64-encoded JSON string with this exact structure:\n" +
+      '{\n  "x402Version": 2,\n' +
+      '  "payload": {\n' +
+      '    "signature": "0x<130+ hex chars — EIP-712 signature>",\n' +
+      '    "authorization": {\n' +
+      '      "from": "0x<your wallet address>",\n' +
+      '      "to": "0x<pay_to address from step 1>",\n' +
+      '      "value": "<amount from step 1, as string e.g. \'49000000\'>",\n' +
+      '      "validAfter": "0",\n' +
+      '      "validBefore": "<unix timestamp ~1hr from now, as string>",\n' +
+      '      "nonce": "0x<64 hex chars — 32 random bytes>"\n' +
+      "    }\n  }\n}\n\n" +
+      "EIP-712 SIGNING:\n" +
+      "Domain: { name: 'USD Coin', version: '2', chainId: 8453, verifyingContract: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' }\n" +
+      "Type: TransferWithAuthorization(address from, address to, uint256 value, uint256 validAfter, uint256 validBefore, bytes32 nonce)\n" +
+      "Sign the typed data, then hex-encode the 65-byte signature with 0x prefix.\n\n" +
+      "IMPORTANT: All values inside authorization (value, validAfter, validBefore) must be STRINGS, not numbers.",
     inputSchema: {
       tier: z.enum(["build", "pro"]).describe("Subscription tier: 'build' ($49/mo) or 'pro' ($199/mo)"),
       payment_signature: z.string().optional().describe(
-        "x402 payment signature (from EIP-3009 signed USDC transfer). " +
-        "Omit on first call to get pricing. Provide on second call to complete payment."
+        "Base64-encoded x402 v2 payment payload JSON. " +
+        "Omit on first call to get pricing (402 response). " +
+        "On second call, provide base64(JSON) where JSON has: " +
+        '{ "x402Version": 2, "payload": { "signature": "0x...", "authorization": { "from", "to", "value", "validAfter", "validBefore", "nonce" } } }. ' +
+        "See tool description for full format."
       ),
     },
     outputSchema: ObjectOutputSchema,
