@@ -1,5 +1,9 @@
 # 0xArchive MCP Server
 
+<a href="https://glama.ai/mcp/servers/@0xArchiveIO/0xarchive-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@0xArchiveIO/0xarchive-mcp/badge" />
+</a>
+
 Query crypto market data across Hyperliquid, HIP-3, and Lighter.xyz using natural language in Claude.
 
 57 tools covering orderbooks, trades, candles, funding rates, open interest, liquidations, data quality metrics, and wallet-based authentication — from April 2023 to real-time.
