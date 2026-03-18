@@ -35,7 +35,7 @@ const MISSING_KEY_MESSAGE =
 
 const server = new McpServer({
   name: "0xarchive",
-  version: "1.3.0",
+  version: "1.4.0",
 });
 
 // All tools are read-only, idempotent API queries to an external service
@@ -57,7 +57,7 @@ const CoinParam = z
 const Hip3CoinParam = z
   .string()
   .describe(
-    "HIP-3 coin symbol (CASE-SENSITIVE), e.g. 'km:US500', 'km:TSLA'. Use get_hip3_instruments to list available symbols."
+    "HIP-3 coin symbol (CASE-SENSITIVE). 125+ markets across 6 builders: xyz, flx, hyna, km, vntl, cash. Examples: 'km:US500', 'xyz:GOLD', 'hyna:BTC', 'vntl:SPACEX', 'flx:TSLA', 'cash:NVDA'. Use get_hip3_instruments to list all."
   );
 
 const LighterCoinParam = z
@@ -130,6 +130,8 @@ const ObjectOutputSchema: ZodRawShape = {
 
 function toUnixMs(ts: number | string): number {
   if (typeof ts === "number") return ts;
+  // MCP/JSON-RPC may deliver numeric timestamps as strings
+  if (/^\d+$/.test(ts)) return Number(ts);
   const parsed = Date.parse(ts);
   if (isNaN(parsed)) throw new Error(`Invalid timestamp: "${ts}"`);
   return parsed;
@@ -712,6 +714,27 @@ registerHistoryTool(
   { interval: AggregationIntervalParam }
 );
 
+// 21b. HIP-3 Liquidations
+registerHistoryTool(
+  "get_hip3_liquidations",
+  "Get HIP-3 liquidation events for a coin over a time range. Returns liquidated/liquidator addresses, price, size, side, and PnL. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Data available from February 2026.",
+  (coin, params) =>
+    api().hyperliquid.hip3.liquidations.history(coin, params as any),
+  Hip3CoinParam,
+  normalizeHip3Coin
+);
+
+// 21c. HIP-3 Liquidation Volume
+registerHistoryTool(
+  "get_hip3_liquidation_volume",
+  "Get aggregated HIP-3 liquidation volume for a coin in time-bucketed intervals. Returns total, long, and short USD volumes. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Data available from February 2026.",
+  (coin, params) =>
+    api().hyperliquid.hip3.liquidations.volume(coin, params as any),
+  Hip3CoinParam,
+  normalizeHip3Coin,
+  { interval: z.enum(["5m", "15m", "30m", "1h", "4h", "1d"]).optional().describe("Aggregation interval: '5m', '15m', '30m', '1h', '4h', '1d'. Default '1h'") }
+);
+
 // ---------------------------------------------------------------------------
 // Tool Registration — Lighter.xyz
 // ---------------------------------------------------------------------------
@@ -892,6 +915,266 @@ registerHistoryTool(
   Hip3CoinParam,
   normalizeHip3Coin,
   { interval: z.enum(["5m", "15m", "30m", "1h", "4h", "1d"]).optional().describe("Aggregation interval: '5m', '15m', '30m', '1h', '4h', '1d'. Default '1h'") }
+);
+
+// ---------------------------------------------------------------------------
+// Tool Registration — Lighter L3 Orderbook
+// ---------------------------------------------------------------------------
+
+// Lighter L3 Orderbook (current)
+registerTool(
+  "get_lighter_l3_orderbook",
+  "Get Lighter L3 order-level orderbook (Pro+ tier). Returns individual orders with order IDs, user addresses, prices, and sizes.",
+  {
+    coin: LighterCoinParam,
+    depth: DepthParam,
+  },
+  ObjectOutputSchema,
+  async (params) => {
+    const sdkParams = params.depth ? { depth: params.depth } : undefined;
+    const data = await api().lighter.l3Orderbook.get(
+      normalizeLighterCoin(params.coin),
+      sdkParams
+    );
+    return formatResponse(data);
+  }
+);
+
+// Lighter L3 Orderbook History
+registerHistoryTool(
+  "get_lighter_l3_orderbook_history",
+  "Get historical Lighter L3 orderbook snapshots (Pro+ tier). Returns order-level snapshots with individual order IDs, user addresses, prices, and sizes over a time range.",
+  (coin, params) =>
+    api().lighter.l3Orderbook.history(coin, params as any),
+  LighterCoinParam,
+  normalizeLighterCoin,
+  { depth: DepthParam }
+);
+
+// ---------------------------------------------------------------------------
+// Tool Registration — Hyperliquid L4 Orders & Orderbook
+// ---------------------------------------------------------------------------
+
+const UserParam = z
+  .string()
+  .optional()
+  .describe("User wallet address filter (e.g., '0x1234...')");
+
+const OrderStatusParam = z
+  .enum(["open", "filled", "cancelled", "expired"])
+  .optional()
+  .describe("Filter orders by status");
+
+const OrderTypeParam = z
+  .enum(["limit", "market", "trigger", "tpsl"])
+  .optional()
+  .describe("Filter orders by type");
+
+const TriggeredParam = z
+  .boolean()
+  .optional()
+  .describe("Filter TP/SL orders by triggered status");
+
+// Hyperliquid Order History
+registerHistoryTool(
+  "get_order_history",
+  "Get Hyperliquid order history with user attribution (Build+ tier). Returns order lifecycle events including placements, fills, cancellations, and modifications with user addresses.",
+  (coin, params) =>
+    api().hyperliquid.orders.history(coin, params as any),
+  CoinParam,
+  normalizeHLCoin,
+  {
+    user: UserParam,
+    status: OrderStatusParam,
+    order_type: OrderTypeParam,
+  }
+);
+
+// Hyperliquid Order Flow
+registerTool(
+  "get_order_flow",
+  "Get Hyperliquid order flow aggregation (Build+ tier). Returns aggregated order placement, cancellation, and fill metrics over time intervals.",
+  {
+    coin: CoinParam,
+    ...HistoryParams,
+    interval: z.enum(["1m", "5m", "15m", "30m", "1h", "4h", "1d"]).optional()
+      .describe("Aggregation interval (default '1h')"),
+  },
+  ListOutputSchema,
+  async (params) => {
+    const { coin, start, end, limit, cursor, interval } = params;
+    const timeRange = resolveTimeRange(start, end);
+    const sdkParams: Record<string, unknown> = {
+      ...timeRange,
+      limit: resolveLimit(limit),
+    };
+    if (cursor) sdkParams.cursor = cursor;
+    if (interval) sdkParams.interval = interval;
+    const result = await api().hyperliquid.orders.flow(
+      normalizeHLCoin(coin),
+      sdkParams as any
+    );
+    return formatCursorResponse(result);
+  }
+);
+
+// Hyperliquid TP/SL Orders
+registerHistoryTool(
+  "get_tpsl",
+  "Get Hyperliquid TP/SL order history (Pro+ tier). Returns take-profit and stop-loss orders with trigger prices, user addresses, and triggered status.",
+  (coin, params) =>
+    api().hyperliquid.orders.tpsl(coin, params as any),
+  CoinParam,
+  normalizeHLCoin,
+  {
+    user: UserParam,
+    triggered: TriggeredParam,
+  }
+);
+
+// Hyperliquid L4 Orderbook Reconstruction
+registerTool(
+  "get_l4_orderbook",
+  "Get Hyperliquid L4 orderbook reconstruction (Pro+ tier). Returns full order-level orderbook at a specific timestamp with individual order IDs, user addresses, prices, and sizes.",
+  {
+    coin: CoinParam,
+    timestamp: TimestampParam.describe("Timestamp for orderbook reconstruction (Unix ms or ISO)"),
+    depth: DepthParam,
+  },
+  ObjectOutputSchema,
+  async (params) => {
+    const sdkParams: Record<string, unknown> = {};
+    if (params.timestamp != null) sdkParams.timestamp = toUnixMs(params.timestamp);
+    if (params.depth) sdkParams.depth = params.depth;
+    const data = await api().hyperliquid.l4Orderbook.get(
+      normalizeHLCoin(params.coin),
+      sdkParams as any
+    );
+    return formatResponse(data);
+  }
+);
+
+// Hyperliquid L4 Orderbook Diffs
+registerHistoryTool(
+  "get_l4_diffs",
+  "Get Hyperliquid L4 orderbook diffs (Build+ tier). Returns raw order-level changes (new orders, modifications, cancellations, fills) over a time range.",
+  (coin, params) =>
+    api().hyperliquid.l4Orderbook.diffs(coin, params as any),
+  CoinParam,
+  normalizeHLCoin
+);
+
+// Hyperliquid L4 Orderbook History (Checkpoints)
+registerHistoryTool(
+  "get_l4_orderbook_history",
+  "Get Hyperliquid L4 orderbook checkpoints (Pro+ tier). Returns periodic full order-level orderbook snapshots over a time range for reconstruction.",
+  (coin, params) =>
+    api().hyperliquid.l4Orderbook.history(coin, params as any),
+  CoinParam,
+  normalizeHLCoin
+);
+
+// ---------------------------------------------------------------------------
+// Tool Registration — HIP-3 L4 Orders & Orderbook
+// ---------------------------------------------------------------------------
+
+// HIP-3 Order History
+registerHistoryTool(
+  "get_hip3_order_history",
+  "Get HIP-3 order history with user attribution (Build+ tier). Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns order lifecycle events with user addresses.",
+  (coin, params) =>
+    api().hyperliquid.hip3.orders.history(coin, params as any),
+  Hip3CoinParam,
+  normalizeHip3Coin,
+  {
+    user: UserParam,
+    status: OrderStatusParam,
+    order_type: OrderTypeParam,
+  }
+);
+
+// HIP-3 Order Flow
+registerTool(
+  "get_hip3_order_flow",
+  "Get HIP-3 order flow aggregation (Build+ tier). Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns aggregated order placement, cancellation, and fill metrics.",
+  {
+    coin: Hip3CoinParam,
+    ...HistoryParams,
+    interval: z.enum(["1m", "5m", "15m", "30m", "1h", "4h", "1d"]).optional()
+      .describe("Aggregation interval (default '1h')"),
+  },
+  ListOutputSchema,
+  async (params) => {
+    const { coin, start, end, limit, cursor, interval } = params;
+    const timeRange = resolveTimeRange(start, end);
+    const sdkParams: Record<string, unknown> = {
+      ...timeRange,
+      limit: resolveLimit(limit),
+    };
+    if (cursor) sdkParams.cursor = cursor;
+    if (interval) sdkParams.interval = interval;
+    const result = await api().hyperliquid.hip3.orders.flow(
+      normalizeHip3Coin(coin),
+      sdkParams as any
+    );
+    return formatCursorResponse(result);
+  }
+);
+
+// HIP-3 TP/SL Orders
+registerHistoryTool(
+  "get_hip3_tpsl",
+  "Get HIP-3 TP/SL order history (Pro+ tier). Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns take-profit and stop-loss orders with trigger prices and triggered status.",
+  (coin, params) =>
+    api().hyperliquid.hip3.orders.tpsl(coin, params as any),
+  Hip3CoinParam,
+  normalizeHip3Coin,
+  {
+    user: UserParam,
+    triggered: TriggeredParam,
+  }
+);
+
+// HIP-3 L4 Orderbook Reconstruction
+registerTool(
+  "get_hip3_l4_orderbook",
+  "Get HIP-3 L4 orderbook reconstruction (Pro+ tier). Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns full order-level orderbook at a specific timestamp.",
+  {
+    coin: Hip3CoinParam,
+    timestamp: TimestampParam.describe("Timestamp for orderbook reconstruction (Unix ms or ISO)"),
+    depth: DepthParam,
+  },
+  ObjectOutputSchema,
+  async (params) => {
+    const sdkParams: Record<string, unknown> = {};
+    if (params.timestamp != null) sdkParams.timestamp = toUnixMs(params.timestamp);
+    if (params.depth) sdkParams.depth = params.depth;
+    const data = await api().hyperliquid.hip3.l4Orderbook.get(
+      normalizeHip3Coin(params.coin),
+      sdkParams as any
+    );
+    return formatResponse(data);
+  }
+);
+
+// HIP-3 L4 Orderbook Diffs
+registerHistoryTool(
+  "get_hip3_l4_diffs",
+  "Get HIP-3 L4 orderbook diffs (Build+ tier). Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns raw order-level changes over a time range.",
+  (coin, params) =>
+    api().hyperliquid.hip3.l4Orderbook.diffs(coin, params as any),
+  Hip3CoinParam,
+  normalizeHip3Coin
+);
+
+// HIP-3 L4 Orderbook History (Checkpoints)
+registerHistoryTool(
+  "get_hip3_l4_orderbook_history",
+  "Get HIP-3 L4 orderbook checkpoints (Pro+ tier). Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns periodic full order-level orderbook snapshots.",
+  (coin, params) =>
+    api().hyperliquid.hip3.l4Orderbook.history(coin, params as any),
+  Hip3CoinParam,
+  normalizeHip3Coin
 );
 
 // ---------------------------------------------------------------------------
