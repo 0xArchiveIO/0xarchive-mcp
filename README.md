@@ -6,7 +6,7 @@
 
 Query crypto market data across Hyperliquid, HIP-3, and Lighter.xyz using natural language in Claude.
 
-57 tools covering orderbooks, trades, candles, funding rates, open interest, liquidations, data quality metrics, and wallet-based authentication — from April 2023 to real-time.
+73 tools covering orderbooks, trades, candles, funding rates, open interest, liquidations, L4 order-level data, data quality metrics, and wallet-based authentication — from April 2023 to real-time.
 
 ## Quick Start (30 seconds)
 
@@ -71,7 +71,7 @@ Add to your `claude_desktop_config.json`:
 }
 ```
 
-## Available Tools (57)
+## Available Tools (73)
 
 ### Hyperliquid
 
@@ -94,6 +94,17 @@ Add to your `claude_desktop_config.json`:
 | `get_summary` | Combined market summary (price, funding, OI, volume, liquidations) |
 | `get_price_history` | Mark/oracle/mid price history |
 
+### Hyperliquid L4 (Order-Level)
+
+| Tool | Description |
+|------|-------------|
+| `get_order_history` | Order history with user attribution (Build+ tier) |
+| `get_order_flow` | Aggregated order placement, cancellation, and fill metrics (Build+ tier) |
+| `get_tpsl` | TP/SL order history with trigger prices and triggered status (Pro+ tier) |
+| `get_l4_orderbook` | L4 orderbook reconstruction at a specific timestamp (Pro+ tier) |
+| `get_l4_diffs` | Raw order-level changes (new, modified, cancelled, filled) over a time range (Build+ tier) |
+| `get_l4_orderbook_history` | Periodic full order-level orderbook checkpoints (Pro+ tier) |
+
 ### HIP-3 (Builder Perps)
 
 | Tool | Description |
@@ -109,9 +120,22 @@ Add to your `claude_desktop_config.json`:
 | `get_hip3_funding` | HIP-3 funding history |
 | `get_hip3_open_interest` | Current HIP-3 open interest |
 | `get_hip3_open_interest_history` | HIP-3 open interest history |
+| `get_hip3_liquidations` | HIP-3 liquidation events (Feb 2026+) |
+| `get_hip3_liquidation_volume` | Aggregated HIP-3 liquidation volume (USD buckets, Feb 2026+) |
 | `get_hip3_freshness` | Per-coin HIP-3 data freshness and lag |
 | `get_hip3_summary` | Combined HIP-3 market summary |
 | `get_hip3_price_history` | HIP-3 mark/oracle/mid price history |
+
+### HIP-3 L4 (Order-Level)
+
+| Tool | Description |
+|------|-------------|
+| `get_hip3_order_history` | HIP-3 order history with user attribution (Build+ tier) |
+| `get_hip3_order_flow` | Aggregated HIP-3 order placement, cancellation, and fill metrics (Build+ tier) |
+| `get_hip3_tpsl` | HIP-3 TP/SL order history with trigger prices and triggered status (Pro+ tier) |
+| `get_hip3_l4_orderbook` | HIP-3 L4 orderbook reconstruction at a specific timestamp (Pro+ tier) |
+| `get_hip3_l4_diffs` | HIP-3 raw order-level changes over a time range (Build+ tier) |
+| `get_hip3_l4_orderbook_history` | HIP-3 periodic full order-level orderbook checkpoints (Pro+ tier) |
 
 ### Lighter.xyz
 
@@ -131,6 +155,13 @@ Add to your `claude_desktop_config.json`:
 | `get_lighter_freshness` | Per-coin Lighter data freshness and lag |
 | `get_lighter_summary` | Combined Lighter market summary |
 | `get_lighter_price_history` | Lighter mark/oracle/mid price history |
+
+### Lighter L3 (Order-Level)
+
+| Tool | Description |
+|------|-------------|
+| `get_lighter_l3_orderbook` | Current L3 order-level orderbook with order IDs and user addresses (Pro+ tier) |
+| `get_lighter_l3_orderbook_history` | Historical L3 orderbook snapshots with individual orders (Pro+ tier) |
 
 ### Data Quality
 
@@ -174,9 +205,9 @@ Upgrade at [0xarchive.io/pricing](https://0xarchive.io/pricing).
 
 ## Tool Annotations
 
-All 57 tools carry MCP annotations so clients can reason about safety and retry behavior.
+All 73 tools carry MCP annotations so clients can reason about safety and retry behavior.
 
-**Market data tools (52):**
+**Market data tools (68):**
 
 | Annotation | Value | Meaning |
 |------------|-------|---------|
@@ -196,3 +227,7 @@ All tools also declare an `outputSchema` so clients can validate structured resp
 - **Interval**: Defaults to 1h for candles
 - **Pagination**: Returns cursor for next page when more data available
 - **Timestamps**: Accepts both Unix milliseconds and ISO 8601 strings
+
+## Bulk Data Downloads
+
+For large-scale data exports (full order books, complete trade history, etc.), use the S3 Parquet bulk export available at [0xarchive.io/data](https://0xarchive.io/data). The Data Explorer lets you select time ranges, symbols, and data types, then download compressed Parquet files directly. The MCP tools are best for point queries and moderate-sized data pulls; for bulk needs, the Data Explorer is significantly faster.
