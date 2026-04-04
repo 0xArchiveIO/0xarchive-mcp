@@ -35,7 +35,7 @@ const MISSING_KEY_MESSAGE =
 
 const server = new McpServer({
   name: "0xarchive",
-  version: "1.4.0",
+  version: "1.5.0",
 });
 
 // All tools are read-only, idempotent API queries to an external service
@@ -1057,7 +1057,7 @@ registerTool(
 // Hyperliquid L4 Orderbook Diffs
 registerHistoryTool(
   "get_l4_diffs",
-  "Get Hyperliquid L4 orderbook diffs (Build+ tier). Returns raw order-level changes (new orders, modifications, cancellations, fills) over a time range.",
+  "Get Hyperliquid L4 orderbook diffs (Pro+ tier). Returns raw order-level changes (new orders, modifications, cancellations, fills) over a time range.",
   (coin, params) =>
     api().hyperliquid.l4Orderbook.diffs(coin, params as any),
   CoinParam,
@@ -1070,6 +1070,53 @@ registerHistoryTool(
   "Get Hyperliquid L4 orderbook checkpoints (Pro+ tier). Returns periodic full order-level orderbook snapshots over a time range for reconstruction.",
   (coin, params) =>
     api().hyperliquid.l4Orderbook.history(coin, params as any),
+  CoinParam,
+  normalizeHLCoin
+);
+
+// ---------------------------------------------------------------------------
+// Tool Registration — Hyperliquid L2 Full-Depth Orderbook
+// ---------------------------------------------------------------------------
+
+// Hyperliquid L2 Orderbook Snapshot
+registerTool(
+  "get_l2_orderbook",
+  "Get Hyperliquid L2 full-depth orderbook (Build+ tier). Returns aggregated price levels with total size and order count per level. Derived from L4 data. Data from March 2026+.",
+  {
+    coin: CoinParam,
+    timestamp: TimestampParam.describe("Timestamp for historical state (Unix ms or ISO). Omit for current.").optional(),
+    depth: DepthParam,
+  },
+  ObjectOutputSchema,
+  async (params) => {
+    const sdkParams: Record<string, unknown> = {};
+    if (params.timestamp != null) sdkParams.timestamp = toUnixMs(params.timestamp);
+    if (params.depth) sdkParams.depth = params.depth;
+    const data = await api().hyperliquid.l2Orderbook.get(
+      normalizeHLCoin(params.coin),
+      sdkParams as any
+    );
+    return formatResponse(data);
+  }
+);
+
+// Hyperliquid L2 Orderbook History
+registerHistoryTool(
+  "get_l2_orderbook_history",
+  "Get Hyperliquid L2 full-depth orderbook checkpoints (Build+ tier). Returns periodic aggregated orderbook snapshots over a time range.",
+  (coin, params) =>
+    api().hyperliquid.l2Orderbook.history(coin, params as any),
+  CoinParam,
+  normalizeHLCoin,
+  { depth: DepthParam }
+);
+
+// Hyperliquid L2 Orderbook Diffs
+registerHistoryTool(
+  "get_l2_diffs",
+  "Get Hyperliquid L2 tick-level orderbook diffs (Pro+ tier). Returns price-level changes over a time range.",
+  (coin, params) =>
+    api().hyperliquid.l2Orderbook.diffs(coin, params as any),
   CoinParam,
   normalizeHLCoin
 );
@@ -1160,7 +1207,7 @@ registerTool(
 // HIP-3 L4 Orderbook Diffs
 registerHistoryTool(
   "get_hip3_l4_diffs",
-  "Get HIP-3 L4 orderbook diffs (Build+ tier). Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns raw order-level changes over a time range.",
+  "Get HIP-3 L4 orderbook diffs (Pro+ tier). Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns raw order-level changes over a time range.",
   (coin, params) =>
     api().hyperliquid.hip3.l4Orderbook.diffs(coin, params as any),
   Hip3CoinParam,
@@ -1173,6 +1220,53 @@ registerHistoryTool(
   "Get HIP-3 L4 orderbook checkpoints (Pro+ tier). Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns periodic full order-level orderbook snapshots.",
   (coin, params) =>
     api().hyperliquid.hip3.l4Orderbook.history(coin, params as any),
+  Hip3CoinParam,
+  normalizeHip3Coin
+);
+
+// ---------------------------------------------------------------------------
+// Tool Registration — HIP-3 L2 Full-Depth Orderbook
+// ---------------------------------------------------------------------------
+
+// HIP-3 L2 Orderbook Snapshot
+registerTool(
+  "get_hip3_l2_orderbook",
+  "Get HIP-3 L2 full-depth orderbook (Build+ tier). Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns aggregated price levels. Derived from L4 data.",
+  {
+    coin: Hip3CoinParam,
+    timestamp: TimestampParam.describe("Timestamp for historical state (Unix ms or ISO). Omit for current.").optional(),
+    depth: DepthParam,
+  },
+  ObjectOutputSchema,
+  async (params) => {
+    const sdkParams: Record<string, unknown> = {};
+    if (params.timestamp != null) sdkParams.timestamp = toUnixMs(params.timestamp);
+    if (params.depth) sdkParams.depth = params.depth;
+    const data = await api().hyperliquid.hip3.l2Orderbook.get(
+      normalizeHip3Coin(params.coin),
+      sdkParams as any
+    );
+    return formatResponse(data);
+  }
+);
+
+// HIP-3 L2 Orderbook History
+registerHistoryTool(
+  "get_hip3_l2_orderbook_history",
+  "Get HIP-3 L2 full-depth orderbook checkpoints (Build+ tier). Symbols are CASE-SENSITIVE. Returns periodic aggregated snapshots.",
+  (coin, params) =>
+    api().hyperliquid.hip3.l2Orderbook.history(coin, params as any),
+  Hip3CoinParam,
+  normalizeHip3Coin,
+  { depth: DepthParam }
+);
+
+// HIP-3 L2 Diffs
+registerHistoryTool(
+  "get_hip3_l2_diffs",
+  "Get HIP-3 L2 tick-level orderbook diffs (Pro+ tier). Symbols are CASE-SENSITIVE. Returns price-level changes.",
+  (coin, params) =>
+    api().hyperliquid.hip3.l2Orderbook.diffs(coin, params as any),
   Hip3CoinParam,
   normalizeHip3Coin
 );

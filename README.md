@@ -6,7 +6,7 @@
 
 Query crypto market data across Hyperliquid, HIP-3, and Lighter.xyz using natural language in Claude.
 
-73 tools covering orderbooks, trades, candles, funding rates, open interest, liquidations, L4 order-level data, data quality metrics, and wallet-based authentication — from April 2023 to real-time.
+79 tools covering orderbooks, trades, candles, funding rates, open interest, liquidations, L4 order-level data, data quality metrics, and wallet-based authentication — from April 2023 to real-time.
 
 ## Quick Start (30 seconds)
 
@@ -71,7 +71,7 @@ Add to your `claude_desktop_config.json`:
 }
 ```
 
-## Available Tools (73)
+## Available Tools (79)
 
 ### Hyperliquid
 
@@ -102,8 +102,16 @@ Add to your `claude_desktop_config.json`:
 | `get_order_flow` | Aggregated order placement, cancellation, and fill metrics (Build+ tier) |
 | `get_tpsl` | TP/SL order history with trigger prices and triggered status (Pro+ tier) |
 | `get_l4_orderbook` | L4 orderbook reconstruction at a specific timestamp (Pro+ tier) |
-| `get_l4_diffs` | Raw order-level changes (new, modified, cancelled, filled) over a time range (Build+ tier) |
+| `get_l4_diffs` | Raw order-level changes (new, modified, cancelled, filled) over a time range (Pro+ tier) |
 | `get_l4_orderbook_history` | Periodic full order-level orderbook checkpoints (Pro+ tier) |
+
+### Hyperliquid L2 (Full-Depth)
+
+| Tool | Description |
+|------|-------------|
+| `get_l2_orderbook` | L2 full-depth orderbook derived from L4 (Build+ tier) |
+| `get_l2_orderbook_history` | Historical L2 full-depth orderbook snapshots (Build+ tier) |
+| `get_l2_diffs` | L2 tick-level diffs (Pro+ tier) |
 
 ### HIP-3 (Builder Perps)
 
@@ -134,8 +142,16 @@ Add to your `claude_desktop_config.json`:
 | `get_hip3_order_flow` | Aggregated HIP-3 order placement, cancellation, and fill metrics (Build+ tier) |
 | `get_hip3_tpsl` | HIP-3 TP/SL order history with trigger prices and triggered status (Pro+ tier) |
 | `get_hip3_l4_orderbook` | HIP-3 L4 orderbook reconstruction at a specific timestamp (Pro+ tier) |
-| `get_hip3_l4_diffs` | HIP-3 raw order-level changes over a time range (Build+ tier) |
+| `get_hip3_l4_diffs` | HIP-3 raw order-level changes over a time range (Pro+ tier) |
 | `get_hip3_l4_orderbook_history` | HIP-3 periodic full order-level orderbook checkpoints (Pro+ tier) |
+
+### HIP-3 L2 (Full-Depth)
+
+| Tool | Description |
+|------|-------------|
+| `get_hip3_l2_orderbook` | HIP-3 L2 full-depth orderbook derived from L4 (Build+ tier) |
+| `get_hip3_l2_orderbook_history` | HIP-3 L2 full-depth orderbook history (Build+ tier) |
+| `get_hip3_l2_diffs` | HIP-3 L2 tick-level diffs (Pro+ tier) |
 
 ### Lighter.xyz
 
@@ -205,9 +221,9 @@ Upgrade at [0xarchive.io/pricing](https://0xarchive.io/pricing).
 
 ## Tool Annotations
 
-All 73 tools carry MCP annotations so clients can reason about safety and retry behavior.
+All 79 tools carry MCP annotations so clients can reason about safety and retry behavior.
 
-**Market data tools (68):**
+**Market data tools (74):**
 
 | Annotation | Value | Meaning |
 |------------|-------|---------|
