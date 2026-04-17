@@ -454,7 +454,7 @@ registerOrderbookTool(
 // 3. Orderbook History
 registerHistoryTool(
   "get_orderbook_history",
-  "Get historical Hyperliquid orderbook snapshots (~1.2s resolution). Returns L2 snapshots with bids/asks over a time range. Data available from April 2023. Requires Pro tier.",
+  "Get historical Hyperliquid orderbook snapshots (~1.2s resolution). Returns L2 snapshots with bids/asks over a time range. Data available from April 2023. Free: BTC only (20 levels). Build+: all symbols (200 levels). Pro+: full depth.",
   (coin, params) =>
     api().hyperliquid.orderbook.history(coin, params as any),
   CoinParam,
