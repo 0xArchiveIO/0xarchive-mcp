@@ -35,7 +35,7 @@ const MISSING_KEY_MESSAGE =
 
 const server = new McpServer({
   name: "0xarchive",
-  version: "1.5.0",
+  version: "1.6.0",
 });
 
 // All tools are read-only, idempotent API queries to an external service
@@ -567,7 +567,7 @@ registerHistoryTool(
   { interval: z.enum(["5m", "15m", "30m", "1h", "4h", "1d"]).optional().describe("Aggregation interval: '5m', '15m', '30m', '1h', '4h', '1d'. Default '1h'") }
 );
 
-// 12. Freshness
+// 13. Freshness
 registerCurrentTool(
   "get_freshness",
   "Get data freshness for a coin across all data types (orderbook, trades, funding, OI, liquidations). Shows when each data type was last updated and current lag.",
@@ -576,7 +576,7 @@ registerCurrentTool(
   normalizeHLCoin
 );
 
-// 13. Summary
+// 14. Summary
 registerCurrentTool(
   "get_summary",
   "Get combined market summary for a coin in a single call. Returns mark price, oracle price, funding rate, open interest, 24h volume, and 24h liquidation volumes.",
@@ -585,7 +585,7 @@ registerCurrentTool(
   normalizeHLCoin
 );
 
-// 14. Price History
+// 15. Price History
 registerHistoryTool(
   "get_price_history",
   "Get mark/oracle price history for a coin over a time range. Returns mark_price, oracle_price, and mid_price at each timestamp. Supports aggregation intervals. Data available from May 2023.",
@@ -600,7 +600,7 @@ registerHistoryTool(
 // Tool Registration — HIP-3
 // ---------------------------------------------------------------------------
 
-// 15. HIP-3 Instruments
+// 16. HIP-3 Instruments
 registerInstrumentsTool(
   "get_hip3_instruments",
   "List all available HIP-3 builder perp instruments on Hyperliquid. HIP-3 symbols are CASE-SENSITIVE (e.g. 'km:US500', 'km:TSLA'). Use this to discover valid symbols before querying HIP-3 data.",
@@ -616,10 +616,10 @@ registerCurrentTool(
   normalizeHip3Coin
 );
 
-// 16. HIP-3 Orderbook
+// 17. HIP-3 Orderbook
 registerOrderbookTool(
   "get_hip3_orderbook",
-  "Get the current HIP-3 orderbook snapshot. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns bids, asks, mid price. Requires Pro tier for full depth.",
+  "Get the current HIP-3 orderbook snapshot. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns bids, asks, mid price. Free tier: km:US500 only. Build+: all HIP-3 symbols.",
   (coin, params) => api().hyperliquid.hip3.orderbook.get(coin, params),
   Hip3CoinParam,
   normalizeHip3Coin
@@ -628,7 +628,7 @@ registerOrderbookTool(
 // HIP-3 Orderbook History
 registerHistoryTool(
   "get_hip3_orderbook_history",
-  "Get historical HIP-3 orderbook snapshots. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns L2 snapshots with bids/asks over a time range. Requires Pro tier.",
+  "Get historical HIP-3 orderbook snapshots. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns L2 snapshots with bids/asks over a time range. Free tier: km:US500 only. Build+: all HIP-3 symbols.",
   (coin, params) =>
     api().hyperliquid.hip3.orderbook.history(coin, params as any),
   Hip3CoinParam,
@@ -636,7 +636,7 @@ registerHistoryTool(
   { depth: DepthParam }
 );
 
-// 17. HIP-3 Trades
+// 18. HIP-3 Trades
 registerHistoryTool(
   "get_hip3_trades",
   "Get HIP-3 trade history. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns trades with price, size, side, and timestamps over a time range. Supports cursor pagination.",
@@ -664,7 +664,7 @@ registerTool(
   }
 );
 
-// 18. HIP-3 Candles
+// 19. HIP-3 Candles
 registerCandleTool(
   "get_hip3_candles",
   "Get HIP-3 OHLCV candle data. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Intervals: 1m to 1w (default 1h). Returns open, high, low, close, volume.",
@@ -683,7 +683,7 @@ registerCurrentTool(
   normalizeHip3Coin
 );
 
-// 19. HIP-3 Funding History
+// 20. HIP-3 Funding History
 registerHistoryTool(
   "get_hip3_funding",
   "Get HIP-3 funding rate history. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns timestamped funding rates over a time range. Supports cursor pagination and aggregation intervals (5m, 15m, 30m, 1h, 4h, 1d).",
@@ -694,7 +694,7 @@ registerHistoryTool(
   { interval: AggregationIntervalParam }
 );
 
-// 20. HIP-3 Open Interest Current
+// 21. HIP-3 Open Interest Current
 registerCurrentTool(
   "get_hip3_open_interest",
   "Get the current HIP-3 open interest for a coin. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns OI, mark price, and oracle price.",
@@ -703,7 +703,7 @@ registerCurrentTool(
   normalizeHip3Coin
 );
 
-// 21. HIP-3 Open Interest History
+// 22. HIP-3 Open Interest History
 registerHistoryTool(
   "get_hip3_open_interest_history",
   "Get HIP-3 open interest history over a time range. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns timestamped OI snapshots.",
@@ -739,7 +739,7 @@ registerHistoryTool(
 // Tool Registration — Lighter.xyz
 // ---------------------------------------------------------------------------
 
-// 22. Lighter Instruments
+// 23. Lighter Instruments
 registerInstrumentsTool(
   "get_lighter_instruments",
   "List all available Lighter.xyz instruments with market IDs, fees, size/price decimals, and active status. Use this to discover valid Lighter symbols.",
@@ -755,7 +755,7 @@ registerCurrentTool(
   normalizeLighterCoin
 );
 
-// 23. Lighter Orderbook
+// 24. Lighter Orderbook
 registerOrderbookTool(
   "get_lighter_orderbook",
   "Get the current Lighter.xyz orderbook snapshot for a coin. Returns bids, asks, mid price, and spread. Optionally specify depth. Requires Pro tier for full depth.",
@@ -781,7 +781,7 @@ registerHistoryTool(
   }
 );
 
-// 24. Lighter Trades
+// 25. Lighter Trades
 registerHistoryTool(
   "get_lighter_trades",
   "Get Lighter.xyz trade history for a coin over a time range. Returns price, size, side, and timestamps. Supports cursor pagination.",
@@ -809,7 +809,7 @@ registerTool(
   }
 );
 
-// 25. Lighter Candles
+// 26. Lighter Candles
 registerCandleTool(
   "get_lighter_candles",
   "Get Lighter.xyz OHLCV candle data for a coin. Intervals: 1m to 1w (default 1h). Returns open, high, low, close, volume.",
@@ -828,7 +828,7 @@ registerCurrentTool(
   normalizeLighterCoin
 );
 
-// 26. Lighter Funding History
+// 27. Lighter Funding History
 registerHistoryTool(
   "get_lighter_funding",
   "Get Lighter.xyz funding rate history for a coin over a time range. Returns timestamped funding rates. Supports cursor pagination and aggregation intervals (5m, 15m, 30m, 1h, 4h, 1d).",
@@ -839,7 +839,7 @@ registerHistoryTool(
   { interval: AggregationIntervalParam }
 );
 
-// 27. Lighter Open Interest Current
+// 28. Lighter Open Interest Current
 registerCurrentTool(
   "get_lighter_open_interest",
   "Get the current Lighter.xyz open interest for a coin. Returns OI, mark price, and oracle price.",
@@ -848,7 +848,7 @@ registerCurrentTool(
   normalizeLighterCoin
 );
 
-// 28. Lighter Open Interest History
+// 29. Lighter Open Interest History
 registerHistoryTool(
   "get_lighter_open_interest_history",
   "Get Lighter.xyz open interest history for a coin over a time range. Returns timestamped OI snapshots.",
@@ -1285,7 +1285,7 @@ const IncidentStatusParam = z
   .optional()
   .describe("Filter incidents by status");
 
-// 29. System Status
+// 30. System Status
 registerTool(
   "get_data_quality_status",
   "Get the current system status for all exchanges and data types. Returns overall health (operational/degraded/outage), per-exchange status with latency, per-data-type completeness, and active incident count.",
