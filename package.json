@@ -16,13 +16,13 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
+    "@0xarchive/sdk": "^1.4.0",
     "@modelcontextprotocol/sdk": "^1.26.0",
-    "@0xarchive/sdk": "file:../../sdks/typescript",
     "zod": "^3.23.0"
   },
   "devDependencies": {
-    "typescript": "^5.4.0",
-    "@types/node": "^22.0.0"
+    "@types/node": "^22.19.17",
+    "typescript": "^5.4.0"
   },
   "license": "MIT",
   "engines": {

@@ -317,7 +317,8 @@ function registerTool(
       }
       try {
         return await handler(params);
-      } catch (error) {
+      } catch (err) {
+    const error = err instanceof OxArchiveError ? err : new OxArchiveError(String(err), 500);
         return formatError(error);
       }
     }
@@ -1466,7 +1467,8 @@ server.registerTool(
         };
       }
       return formatResponse(data);
-    } catch (error) {
+    } catch (err) {
+    const error = err instanceof OxArchiveError ? err : new OxArchiveError(String(err), 500);
       return formatError(error);
     }
   }
@@ -1506,7 +1508,8 @@ server.registerTool(
         };
       }
       return formatResponse(data);
-    } catch (error) {
+    } catch (err) {
+    const error = err instanceof OxArchiveError ? err : new OxArchiveError(String(err), 500);
       return formatError(error);
     }
   }
@@ -1545,7 +1548,8 @@ server.registerTool(
         };
       }
       return formatResponse(data);
-    } catch (error) {
+    } catch (err) {
+    const error = err instanceof OxArchiveError ? err : new OxArchiveError(String(err), 500);
       return formatError(error);
     }
   }
@@ -1585,7 +1589,8 @@ server.registerTool(
         };
       }
       return formatResponse(data);
-    } catch (error) {
+    } catch (err) {
+    const error = err instanceof OxArchiveError ? err : new OxArchiveError(String(err), 500);
       return formatError(error);
     }
   }
@@ -1656,7 +1661,8 @@ server.registerTool(
         };
       }
       return formatResponse(data);
-    } catch (error) {
+    } catch (err) {
+    const error = err instanceof OxArchiveError ? err : new OxArchiveError(String(err), 500);
       return formatError(error);
     }
   }
