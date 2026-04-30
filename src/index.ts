@@ -1278,7 +1278,7 @@ registerHistoryTool(
 const ExchangeParam = z
   .enum(["hyperliquid", "lighter", "hip3"])
   .optional()
-  .describe("Exchange name");
+  .describe("Venue scope");
 
 const IncidentStatusParam = z
   .enum(["open", "investigating", "identified", "monitoring", "resolved"])
@@ -1288,7 +1288,7 @@ const IncidentStatusParam = z
 // 30. System Status
 registerTool(
   "get_data_quality_status",
-  "Get the current system status for all exchanges and data types. Returns overall health (operational/degraded/outage), per-exchange status with latency, per-data-type completeness, and active incident count.",
+  "Get the current system status for supported venue APIs and data types. Returns overall health (operational/degraded/outage), per-scope status with latency, per-data-type completeness, and active incident count.",
   {},
   ObjectOutputSchema,
   async () => {
@@ -1300,7 +1300,7 @@ registerTool(
 // 30. Coverage Overview
 registerTool(
   "get_data_coverage",
-  "Get data coverage across all exchanges. Returns earliest/latest timestamps, total records, symbol count, resolution, lag, and completeness per data type per exchange.",
+  "Get data coverage across supported venue APIs. Returns earliest/latest timestamps, total records, symbol count, resolution, lag, and completeness per data type per venue scope.",
   {},
   ObjectOutputSchema,
   async () => {
@@ -1312,9 +1312,9 @@ registerTool(
 // Exchange Coverage
 registerTool(
   "get_exchange_coverage",
-  "Get data coverage for a specific exchange. Returns earliest/latest timestamps, total records, symbol count, resolution, and completeness per data type.",
+  "Get data coverage for a specific venue scope. Returns earliest/latest timestamps, total records, symbol count, resolution, and completeness per data type.",
   {
-    exchange: z.enum(["hyperliquid", "lighter", "hip3"]).describe("Exchange name"),
+    exchange: z.enum(["hyperliquid", "lighter", "hip3"]).describe("Venue scope"),
   },
   ObjectOutputSchema,
   async (params) => {
@@ -1326,9 +1326,9 @@ registerTool(
 // 31. Symbol Coverage
 registerTool(
   "get_symbol_coverage",
-  "Get detailed data coverage for a specific symbol on an exchange. Returns per-data-type coverage with earliest/latest, total records, completeness, detected data gaps, and cadence metrics.",
+  "Get detailed data coverage for a specific symbol on a venue scope. Returns per-data-type coverage with earliest/latest, total records, completeness, detected data gaps, and cadence metrics.",
   {
-    exchange: z.enum(["hyperliquid", "lighter", "hip3"]).describe("Exchange name"),
+    exchange: z.enum(["hyperliquid", "lighter", "hip3"]).describe("Venue scope"),
     symbol: z.string().describe("Symbol, e.g. 'BTC', 'ETH', 'km:US500'"),
     from: TimestampParam.describe("Start of gap detection window (Unix ms or ISO). Defaults to 30 days ago."),
     to: TimestampParam.describe("End of gap detection window (Unix ms or ISO). Defaults to now."),
@@ -1390,7 +1390,7 @@ registerTool(
 // 33. Latency
 registerTool(
   "get_data_latency",
-  "Get current latency metrics for all exchanges. Returns WebSocket latency (current, 1h avg, 24h avg), REST API latency, and data freshness lag per data type (orderbook, fills, funding, OI).",
+  "Get current latency metrics for supported venue APIs. Returns WebSocket latency (current, 1h avg, 24h avg), REST API latency, and data freshness lag per data type (orderbook, fills, funding, OI).",
   {},
   ObjectOutputSchema,
   async () => {

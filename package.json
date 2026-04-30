@@ -1,7 +1,7 @@
 {
   "name": "@0xarchive/mcp-server",
   "version": "1.6.0",
-  "description": "MCP server exposing 0xArchive market data API as tools for Claude Desktop/Code/API",
+  "description": "MCP server that gives coding agents typed 0xArchive market data tools",
   "type": "module",
   "bin": {
     "0xarchive-mcp": "./build/index.js"
@@ -16,8 +16,8 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
+    "@0xarchive/sdk": "^1.4.0",
     "@modelcontextprotocol/sdk": "^1.26.0",
-    "@0xarchive/sdk": "file:../../sdks/typescript",
     "zod": "^3.23.0"
   },
   "devDependencies": {
@@ -25,6 +25,27 @@
     "@types/node": "^22.0.0"
   },
   "license": "MIT",
+  "keywords": [
+    "0xarchive",
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "market-data",
+    "hyperliquid",
+    "lighterxyz",
+    "orderbook",
+    "agents",
+    "claude",
+    "codex"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/0xArchiveIO/0xarchive-mcp"
+  },
+  "homepage": "https://www.0xarchive.io/github-mcp",
+  "bugs": {
+    "url": "https://github.com/0xArchiveIO/0xarchive-mcp/issues"
+  },
   "engines": {
     "node": ">=18"
   }
