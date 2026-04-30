@@ -4,23 +4,59 @@
   <img width="380" height="200" src="https://glama.ai/mcp/servers/@0xArchiveIO/0xarchive-mcp/badge" />
 </a>
 
-Query crypto market data across Hyperliquid, HIP-3, and Lighter.xyz using natural language in Claude.
+Typed 0xArchive market data tools for MCP-capable clients.
 
-79 tools covering orderbooks, trades, candles, funding rates, open interest, liquidations, L4 order-level data, data quality metrics, and wallet-based authentication — from April 2023 to real-time.
+0xArchive is granular market data infrastructure for Hyperliquid and Lighter.xyz. HIP-3 builder perps live under the Hyperliquid namespace. This server exposes 79 typed tools for order books, trades, candles, funding, open interest, liquidations, L4/L3 order-level data, data quality, and wallet-managed auth.
 
-## Quick Start (30 seconds)
+Use MCP when you want typed tools or shared client config across any client that supports MCP, including Claude Code, Claude Desktop, Cursor, Codex CLI or IDE setups with MCP enabled, and other agent clients. Claude Code and GPT Codex are equal first-class coding-agent paths: use this server wherever MCP is available, and use the same API key with the CLI, SDKs, skills, `llms.txt`, OpenAPI, and markdown docs wherever shell, repo, or file context is the better route.
+
+## First Tool Result
+
+This repository currently builds the MCP server from source. A published-package install path is blocked until the package dependency cleanup from public PR #6 is verified and released.
 
 ```bash
 git clone https://github.com/0xArchiveIO/0xarchive-mcp.git
-cd 0xarchive-mcp && npm install && npm run build
-claude mcp add 0xarchive -s user -t stdio -e OXARCHIVE_API_KEY=0xa_your_api_key -- node $(pwd)/build/index.js
+cd 0xarchive-mcp
+npm install
+npm run build
+
+export OXARCHIVE_API_KEY="0xa_your_api_key"
+
+# Claude Code command mechanics
+claude mcp add 0xarchive -s user -t stdio \
+  -e OXARCHIVE_API_KEY="$OXARCHIVE_API_KEY" \
+  -- node "$(pwd)/build/index.js"
 ```
 
-Then ask Claude: **"What's BTC's current funding rate?"**
+The `claude mcp add` line is a Claude Code setup mechanic. Codex CLI or IDE users with MCP enabled should register the same stdio command in their Codex MCP config: `node /absolute/path/to/0xarchive-mcp/build/index.js`. Ask one narrow question first:
+
+> What's BTC's current funding rate?
+
+Expected result: the client invokes a concrete 0xArchive MCP tool and returns live venue data or a direct auth/configuration error.
+
+## Agent Integration Requirements
+
+| Agent surface | Requirement | Setup mechanic |
+| --- | --- | --- |
+| Claude Code | Claude Code MCP support and a local Node build | `claude mcp add ... -- node /absolute/path/to/build/index.js` |
+| Claude Desktop | Desktop MCP JSON config | Add the stdio server to `claude_desktop_config.json` |
+| GPT Codex | Codex CLI or IDE extension with MCP enabled | Configure Codex MCP to run the same stdio command; if MCP is unavailable, use the CLI, SDKs, skills, `llms.txt`, OpenAPI, or markdown docs |
+| Other MCP clients | Local stdio MCP support | Run `node /absolute/path/to/0xarchive-mcp/build/index.js` with `OXARCHIVE_API_KEY` in the environment |
+
+## Choose This Or Another Agent Path
+
+| Need | Best first path |
+| --- | --- |
+| Typed tools or shared MCP config | This MCP server |
+| Fast local agent setup | [AI Clients guide](https://www.0xarchive.io/docs/ai-clients) |
+| Claude Code, GPT Codex, or other shell-first coding-agent work | [CLI](https://www.0xarchive.io/docs/cli) |
+| Direct SDK integration | [SDK docs](https://www.0xarchive.io/docs/sdks) |
+| File-based historical pulls | [Data Catalog](https://www.0xarchive.io/data) |
+| Machine-readable context | [llms.txt](https://www.0xarchive.io/llms.txt), [OpenAPI](https://www.0xarchive.io/openapi.json) |
 
 ## Usage Examples
 
-| Ask Claude... | Tool that fires |
+| Prompt | Tool that fires |
 |---------------|-----------------|
 | "Give me a BTC market summary" | `get_summary` |
 | "Show ETH 4h candles for the past week" | `get_candles` |
@@ -32,7 +68,7 @@ Then ask Claude: **"What's BTC's current funding rate?"**
 | "What's the km:US500 price on HIP-3?" | `get_hip3_summary` |
 | "Show me the SLA report for January 2026" | `get_data_sla` |
 
-## Setup (detailed)
+## Setup
 
 ### 1. Install & Build
 
@@ -45,9 +81,11 @@ npm run build
 
 ### 2. Get an API Key
 
-Sign up at [0xarchive.io](https://0xarchive.io) and generate an API key in Dashboard. Or use the `web3_challenge` and `web3_signup` tools to get a free API key with just an Ethereum wallet — no browser needed.
+Create an account at [0xArchive signup](https://www.0xarchive.io/signup), generate an API key, and set `OXARCHIVE_API_KEY`. Or use the `web3_challenge` and `web3_signup` tools to get a free API key with just an Ethereum wallet — no browser needed.
 
-### 3. Add to Claude Code
+### 3. Add to an MCP client
+
+Claude Code command mechanics:
 
 ```bash
 claude mcp add 0xarchive -s user -t stdio -e OXARCHIVE_API_KEY=0xa_your_api_key -- node /absolute/path/to/0xarchive-mcp/build/index.js
@@ -70,6 +108,8 @@ Add to your `claude_desktop_config.json`:
   }
 }
 ```
+
+For GPT Codex and other agent workflows, use this same stdio server command wherever your client supports local MCP servers. If MCP is not available there, route the same API key through the CLI, SDKs, skills, markdown docs, `llms.txt`, or OpenAPI. The acquisition path is shared: make one authenticated request, then expand into replay, SDKs, Data Catalog exports, or agent tooling.
 
 ## Available Tools (79)
 
@@ -183,7 +223,7 @@ Add to your `claude_desktop_config.json`:
 
 | Tool | Description |
 |------|-------------|
-| `get_data_quality_status` | System health across all exchanges |
+| `get_data_quality_status` | System health across venue APIs |
 | `get_data_coverage` | Data coverage (earliest/latest, records, completeness) |
 | `get_exchange_coverage` | Coverage for a specific exchange |
 | `get_symbol_coverage` | Per-symbol coverage with gap detection |
@@ -244,6 +284,6 @@ All tools also declare an `outputSchema` so clients can validate structured resp
 - **Pagination**: Returns cursor for next page when more data available
 - **Timestamps**: Accepts both Unix milliseconds and ISO 8601 strings
 
-## Bulk Data Downloads
+## Data Catalog
 
-For large-scale data exports (full order books, complete trade history, etc.), use the S3 Parquet bulk export available at [0xarchive.io/data](https://0xarchive.io/data). The Data Explorer lets you select time ranges, symbols, and data types, then download compressed Parquet files directly. The MCP tools are best for point queries and moderate-sized data pulls; for bulk needs, the Data Explorer is significantly faster.
+For large-scale data exports (full order books, complete trade history, etc.), use the [Data Catalog](https://www.0xarchive.io/data). It lets you choose markets, datasets, and date ranges, see a live quote, and export zstd-compressed Parquet. MCP tools are best for typed point queries and moderate data pulls; the Data Catalog is the file-export path.
