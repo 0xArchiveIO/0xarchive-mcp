@@ -1,6 +1,6 @@
 {
   "name": "@0xarchive/mcp-server",
-  "version": "1.6.0",
+  "version": "1.8.0",
   "description": "MCP server that gives coding agents typed 0xArchive market data tools",
   "type": "module",
   "bin": {
@@ -13,7 +13,8 @@
     "build": "tsc",
     "prepublishOnly": "npm run build",
     "start": "node build/index.js",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "test": "npm run build && node --test test/*.test.mjs"
   },
   "dependencies": {
     "@0xarchive/sdk": "^1.4.0",

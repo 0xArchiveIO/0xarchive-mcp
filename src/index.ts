@@ -35,7 +35,7 @@ const MISSING_KEY_MESSAGE =
 
 const server = new McpServer({
   name: "0xarchive",
-  version: "1.6.0",
+  version: "1.8.0",
 });
 
 // All tools are read-only, idempotent API queries to an external service
@@ -59,6 +59,16 @@ const Hip3CoinParam = z
   .describe(
     "HIP-3 coin symbol (CASE-SENSITIVE). 125+ markets across 6 builders: xyz, flx, hyna, km, vntl, cash. Examples: 'km:US500', 'xyz:GOLD', 'hyna:BTC', 'vntl:SPACEX', 'flx:TSLA', 'cash:NVDA'. Use get_hip3_instruments to list all."
   );
+
+const Hip4CoinParam = z
+  .string()
+  .describe(
+    "HIP-4 outcome-market coin symbol. Canonical form is the bare numeric '<10*outcome_id + side>' (e.g. '0' for outcome 0 Yes, '1' for outcome 0 No, '10' for outcome 1 Yes). The legacy '#0' and '%230' forms are also accepted. Use get_hip4_instruments to list all."
+  );
+
+const Hip4OutcomeIdParam = z
+  .union([z.number(), z.string()])
+  .describe("HIP-4 outcome_id (integer). Each outcome has two sides: '<10*id>' (Yes) and '<10*id+1>' (No).");
 
 const LighterCoinParam = z
   .string()
@@ -283,6 +293,18 @@ function normalizeHLCoin(coin: string): string {
 
 function normalizeHip3Coin(coin: string): string {
   return coin; // Case-sensitive
+}
+
+// HIP-4 path encoding: the canonical form is the bare numeric `0`, `1`, `42`.
+// The legacy `#0` / `%230` forms are still accepted by the API. We normalize to
+// the bare form when possible (avoids URL-fragment ambiguity entirely).
+function normalizeHip4Coin(coin: string): string {
+  const trimmed = String(coin).trim();
+  if (/^\d+$/.test(trimmed)) return trimmed;
+  const stripped = trimmed.replace(/^(#|%23)/i, "");
+  if (/^\d+$/.test(stripped)) return stripped;
+  // Unknown shape — fall back to URL-encoding the original.
+  return encodeURIComponent(trimmed);
 }
 
 function normalizeLighterCoin(coin: string): string {
@@ -526,7 +548,7 @@ registerHistoryTool(
 // 10. Liquidations
 registerHistoryTool(
   "get_liquidations",
-  "Get Hyperliquid liquidation history for a coin over a time range. Returns liquidated/liquidator addresses, price, size, side, and PnL. Data available from May 2025.",
+  "Get Hyperliquid liquidation history for a coin over a time range. Returns liquidated/liquidator addresses, price, size, side, and PnL. Data available from May 2025. Real-time liquidations are also available on the WebSocket `liquidations` channel — each event is a fill row with `is_liquidation: true`, same shape as the `trades` channel.",
   (coin, params) =>
     api().hyperliquid.liquidations.history(coin, params as any),
   CoinParam,
@@ -718,7 +740,7 @@ registerHistoryTool(
 // 21b. HIP-3 Liquidations
 registerHistoryTool(
   "get_hip3_liquidations",
-  "Get HIP-3 liquidation events for a coin over a time range. Returns liquidated/liquidator addresses, price, size, side, and PnL. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Data available from February 2026.",
+  "Get HIP-3 liquidation events for a coin over a time range. Returns liquidated/liquidator addresses, price, size, side, and PnL. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Data available from February 2026. Real-time HIP-3 liquidations are also available on the WebSocket `hip3_liquidations` channel — each event is a fill row with `is_liquidation: true`, same shape as the `hip3_trades` channel.",
   (coin, params) =>
     api().hyperliquid.hip3.liquidations.history(coin, params as any),
   Hip3CoinParam,
@@ -1270,6 +1292,440 @@ registerHistoryTool(
     api().hyperliquid.hip3.l2Orderbook.diffs(coin, params as any),
   Hip3CoinParam,
   normalizeHip3Coin
+);
+
+// ---------------------------------------------------------------------------
+// Tool Registration — HIP-4 (Outcome Markets)
+// ---------------------------------------------------------------------------
+// SDK 1.4.0 has no `hip4` namespace. Until it lands, HIP-4 tools call the REST
+// API directly via the same auth header the SDK uses.
+
+const HIP4_BASE_URL = "https://api.0xarchive.io";
+const HIP4_BASE_PATH = "/v1/hyperliquid/hip4";
+
+async function hip4Request(
+  path: string,
+  query?: Record<string, unknown>
+): Promise<{ data: unknown; nextCursor?: string }> {
+  const url = new URL(`${HIP4_BASE_PATH}${path}`, HIP4_BASE_URL);
+  if (query) {
+    for (const [k, v] of Object.entries(query)) {
+      if (v === undefined || v === null) continue;
+      url.searchParams.set(k, String(v));
+    }
+  }
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "User-Agent": "0xarchive-mcp/1.8.0",
+  };
+  if (apiKey) headers["X-API-Key"] = apiKey;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60000);
+  try {
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers,
+      signal: controller.signal,
+    });
+    const text = await response.text();
+    let body: any;
+    try {
+      body = text ? JSON.parse(text) : null;
+    } catch {
+      body = text;
+    }
+    if (!response.ok) {
+      const requestId =
+        response.headers.get("x-request-id") || body?.meta?.requestId;
+      const message =
+        (body && (body.error?.message || body.error || body.message)) ||
+        `HTTP ${response.status}`;
+      throw new OxArchiveError(message, response.status, requestId ?? undefined);
+    }
+    if (body && typeof body === "object" && "data" in body) {
+      return {
+        data: body.data,
+        nextCursor: body.meta?.nextCursor,
+      };
+    }
+    return { data: body };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function buildHistoryQuery(
+  start?: number | string,
+  end?: number | string,
+  limit?: number,
+  cursor?: string,
+  extra?: Record<string, unknown>
+): Record<string, unknown> {
+  const range = resolveTimeRange(start, end);
+  const q: Record<string, unknown> = {
+    start: range.start,
+    end: range.end,
+    limit: resolveLimit(limit),
+  };
+  if (cursor) q.cursor = cursor;
+  if (extra) {
+    for (const [k, v] of Object.entries(extra)) {
+      if (v !== undefined) q[k] = v;
+    }
+  }
+  return q;
+}
+
+// HIP-4 Instruments (list)
+registerTool(
+  "get_hip4_instruments",
+  "List all available HIP-4 outcome-market instruments (one row per side, e.g. '0', '1'). HIP-4 coins use the bare numeric format '<10*outcome_id + side>' (legacy '#0' / '%230' forms also accepted). Use this to discover valid HIP-4 symbols.",
+  {},
+  ListOutputSchema,
+  async () => {
+    const result = await hip4Request("/instruments");
+    return formatResponse(result.data);
+  }
+);
+
+// HIP-4 Single Instrument
+registerTool(
+  "get_hip4_instrument",
+  "Get details for a single HIP-4 instrument by coin symbol (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns per-side metadata including outcome_id, side, asset_id, name, recurring class/underlying/expiry, builder address, and is_settled status.",
+  { coin: Hip4CoinParam },
+  ObjectOutputSchema,
+  async (params) => {
+    const result = await hip4Request(`/instruments/${normalizeHip4Coin(params.coin)}`);
+    return formatResponse(result.data);
+  }
+);
+
+// HIP-4 Outcomes (list)
+registerTool(
+  "get_hip4_outcomes",
+  "List HIP-4 outcome markets aggregated across both sides. Optionally filter by settlement status. Each outcome groups its '<10*id>' Yes / '<10*id+1>' No sides. Listen for the WebSocket `outcome_settled` event to get notified when an outcome resolves. The list response omits aggregated_oi; use get_hip4_outcome for the OI snapshot.",
+  {
+    is_settled: z
+      .boolean()
+      .optional()
+      .describe("Filter by settlement status. Omit to return all outcomes."),
+    limit: LimitParam,
+    cursor: CursorParam,
+  },
+  ListOutputSchema,
+  async (params) => {
+    const q: Record<string, unknown> = {};
+    if (params.is_settled !== undefined) q.is_settled = params.is_settled;
+    if (params.limit) q.limit = resolveLimit(params.limit);
+    if (params.cursor) q.cursor = params.cursor;
+    const result = await hip4Request("/outcomes", q);
+    return formatCursorResponse(result);
+  }
+);
+
+// HIP-4 Single Outcome
+registerTool(
+  "get_hip4_outcome",
+  "Get a single HIP-4 outcome by outcome_id. Returns the full Hip4OutcomeAggregate including aggregated_oi (latest both-sides OI snapshot, paired set supply, parity, and currency).",
+  { outcome_id: Hip4OutcomeIdParam },
+  ObjectOutputSchema,
+  async (params) => {
+    const result = await hip4Request(`/outcomes/${encodeURIComponent(String(params.outcome_id))}`);
+    return formatResponse(result.data);
+  }
+);
+
+// HIP-4 Orderbook (current)
+registerTool(
+  "get_hip4_orderbook",
+  "Get the current HIP-4 L2 orderbook snapshot for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns bids and asks. Note: mark_price for HIP-4 is an implied probability (0..1), not a USD price. Pro+ tier required.",
+  {
+    coin: Hip4CoinParam,
+    depth: DepthParam,
+  },
+  ObjectOutputSchema,
+  async (params) => {
+    const q: Record<string, unknown> = {};
+    if (params.depth) q.depth = params.depth;
+    const result = await hip4Request(`/orderbook/${normalizeHip4Coin(params.coin)}`, q);
+    return formatResponse(result.data);
+  }
+);
+
+// HIP-4 Orderbook History
+registerTool(
+  "get_hip4_orderbook_history",
+  "Get historical HIP-4 L2 orderbook snapshots for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns L2 snapshots over a time range. Pro+ tier required.",
+  {
+    coin: Hip4CoinParam,
+    ...HistoryParams,
+    depth: DepthParam,
+  },
+  ListOutputSchema,
+  async (params) => {
+    const q = buildHistoryQuery(params.start, params.end, params.limit, params.cursor, {
+      depth: params.depth,
+    });
+    const result = await hip4Request(
+      `/orderbook/${normalizeHip4Coin(params.coin)}/history`,
+      q
+    );
+    return formatCursorResponse(result);
+  }
+);
+
+// HIP-4 Trades
+registerTool(
+  "get_hip4_trades",
+  "Get HIP-4 trade/fill history for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns price, size, side, and timestamps over a time range. Supports cursor pagination.",
+  {
+    coin: Hip4CoinParam,
+    ...HistoryParams,
+  },
+  ListOutputSchema,
+  async (params) => {
+    const q = buildHistoryQuery(params.start, params.end, params.limit, params.cursor);
+    const result = await hip4Request(`/trades/${normalizeHip4Coin(params.coin)}`, q);
+    return formatCursorResponse(result);
+  }
+);
+
+// HIP-4 Recent Trades
+registerTool(
+  "get_hip4_trades_recent",
+  "Get the most recent HIP-4 trades for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns the latest trades without needing a time range.",
+  {
+    coin: Hip4CoinParam,
+    limit: LimitParam,
+  },
+  ListOutputSchema,
+  async (params) => {
+    const q: Record<string, unknown> = {};
+    if (params.limit) q.limit = resolveLimit(params.limit);
+    const result = await hip4Request(
+      `/trades/${normalizeHip4Coin(params.coin)}/recent`,
+      q
+    );
+    return formatResponse(result.data);
+  }
+);
+
+// HIP-4 Open Interest (history)
+registerTool(
+  "get_hip4_open_interest",
+  "Get HIP-4 per-side open interest history for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns timestamped OI snapshots; mark_price is an implied probability (0..1). For paired-set / display OI use get_hip4_outcome.",
+  {
+    coin: Hip4CoinParam,
+    ...HistoryParams,
+    interval: AggregationIntervalParam,
+  },
+  ListOutputSchema,
+  async (params) => {
+    const q = buildHistoryQuery(params.start, params.end, params.limit, params.cursor, {
+      interval: params.interval,
+    });
+    const result = await hip4Request(
+      `/openinterest/${normalizeHip4Coin(params.coin)}`,
+      q
+    );
+    return formatCursorResponse(result);
+  }
+);
+
+// HIP-4 Open Interest (current)
+registerTool(
+  "get_hip4_open_interest_current",
+  "Get the current HIP-4 per-side open interest for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns the latest OI row; mark_price is an implied probability (0..1). For paired-set / display OI use get_hip4_outcome.",
+  { coin: Hip4CoinParam },
+  ObjectOutputSchema,
+  async (params) => {
+    const result = await hip4Request(
+      `/openinterest/${normalizeHip4Coin(params.coin)}/current`
+    );
+    return formatResponse(result.data);
+  }
+);
+
+// HIP-4 Freshness
+registerTool(
+  "get_hip4_freshness",
+  "Get HIP-4 data freshness for a coin (e.g. '0') across all available data types (orderbook, trades, OI, L4). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Shows when each data type was last updated and current lag.",
+  { coin: Hip4CoinParam },
+  ObjectOutputSchema,
+  async (params) => {
+    const result = await hip4Request(`/freshness/${normalizeHip4Coin(params.coin)}`);
+    return formatResponse(result.data);
+  }
+);
+
+// HIP-4 Summary
+registerTool(
+  "get_hip4_summary",
+  "Get a combined HIP-4 24h market summary for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns price, volume, and OI aggregates. mark_price is an implied probability (0..1), not USD.",
+  { coin: Hip4CoinParam },
+  ObjectOutputSchema,
+  async (params) => {
+    const result = await hip4Request(`/summary/${normalizeHip4Coin(params.coin)}`);
+    return formatResponse(result.data);
+  }
+);
+
+// HIP-4 Prices
+registerTool(
+  "get_hip4_prices",
+  "Get HIP-4 mid-price (implied probability, 0..1) history for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns timestamped price snapshots over a time range with cursor pagination.",
+  {
+    coin: Hip4CoinParam,
+    ...HistoryParams,
+    interval: z
+      .enum(["5m", "15m", "30m", "1h", "4h", "1d"])
+      .optional()
+      .describe("Aggregation interval: '5m', '15m', '30m', '1h', '4h', '1d'. Default '1h'"),
+  },
+  ListOutputSchema,
+  async (params) => {
+    const q = buildHistoryQuery(params.start, params.end, params.limit, params.cursor, {
+      interval: params.interval,
+    });
+    const result = await hip4Request(`/prices/${normalizeHip4Coin(params.coin)}`, q);
+    return formatCursorResponse(result);
+  }
+);
+
+// HIP-4 Order History
+registerTool(
+  "get_hip4_order_history",
+  "Get HIP-4 order lifecycle events with user attribution (Pro+ tier) for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns placements, fills, cancellations, modifications.",
+  {
+    coin: Hip4CoinParam,
+    ...HistoryParams,
+    user: UserParam,
+    status: OrderStatusParam,
+    order_type: OrderTypeParam,
+  },
+  ListOutputSchema,
+  async (params) => {
+    const q = buildHistoryQuery(params.start, params.end, params.limit, params.cursor, {
+      user: params.user,
+      status: params.status,
+      order_type: params.order_type,
+    });
+    const result = await hip4Request(
+      `/orders/${normalizeHip4Coin(params.coin)}/history`,
+      q
+    );
+    return formatCursorResponse(result);
+  }
+);
+
+// HIP-4 Order Flow
+registerTool(
+  "get_hip4_order_flow",
+  "Get HIP-4 order flow aggregation (Pro+ tier) for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns time-bucketed order placement, cancellation, and fill metrics.",
+  {
+    coin: Hip4CoinParam,
+    ...HistoryParams,
+    interval: z
+      .enum(["1m", "5m", "15m", "30m", "1h", "4h", "1d"])
+      .optional()
+      .describe("Aggregation interval (default '1h')"),
+  },
+  ListOutputSchema,
+  async (params) => {
+    const q = buildHistoryQuery(params.start, params.end, params.limit, params.cursor, {
+      interval: params.interval,
+    });
+    const result = await hip4Request(
+      `/orders/${normalizeHip4Coin(params.coin)}/flow`,
+      q
+    );
+    return formatCursorResponse(result);
+  }
+);
+
+// HIP-4 TP/SL
+registerTool(
+  "get_hip4_tpsl",
+  "Get HIP-4 TP/SL order history (Pro+ tier) for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns take-profit and stop-loss orders with trigger prices and triggered status.",
+  {
+    coin: Hip4CoinParam,
+    ...HistoryParams,
+    user: UserParam,
+    triggered: TriggeredParam,
+  },
+  ListOutputSchema,
+  async (params) => {
+    const q = buildHistoryQuery(params.start, params.end, params.limit, params.cursor, {
+      user: params.user,
+      triggered: params.triggered,
+    });
+    const result = await hip4Request(
+      `/orders/${normalizeHip4Coin(params.coin)}/tpsl`,
+      q
+    );
+    return formatCursorResponse(result);
+  }
+);
+
+// HIP-4 L4 Orderbook (current reconstruction)
+registerTool(
+  "get_hip4_l4_orderbook",
+  "Get HIP-4 L4 orderbook reconstruction (Pro+ tier) for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns the full order-level orderbook at a specific timestamp with individual order IDs, user addresses, prices, and sizes.",
+  {
+    coin: Hip4CoinParam,
+    timestamp: TimestampParam.describe("Timestamp for orderbook reconstruction (Unix ms or ISO)"),
+    depth: DepthParam,
+  },
+  ObjectOutputSchema,
+  async (params) => {
+    const q: Record<string, unknown> = {};
+    if (params.timestamp != null) q.timestamp = toUnixMs(params.timestamp);
+    if (params.depth) q.depth = params.depth;
+    const result = await hip4Request(
+      `/orderbook/${normalizeHip4Coin(params.coin)}/l4`,
+      q
+    );
+    return formatResponse(result.data);
+  }
+);
+
+// HIP-4 L4 Diffs
+registerTool(
+  "get_hip4_l4_diffs",
+  "Get HIP-4 L4 orderbook diffs (Pro+ tier) for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns raw order-level changes (new orders, modifications, cancellations, fills) over a time range.",
+  {
+    coin: Hip4CoinParam,
+    ...HistoryParams,
+  },
+  ListOutputSchema,
+  async (params) => {
+    const q = buildHistoryQuery(params.start, params.end, params.limit, params.cursor);
+    const result = await hip4Request(
+      `/orderbook/${normalizeHip4Coin(params.coin)}/l4/diffs`,
+      q
+    );
+    return formatCursorResponse(result);
+  }
+);
+
+// HIP-4 L4 Orderbook History (Checkpoints)
+registerTool(
+  "get_hip4_l4_orderbook_history",
+  "Get HIP-4 L4 orderbook checkpoints (Build+ tier) for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns periodic full order-level snapshots. Hard cap limit=10 per request.",
+  {
+    coin: Hip4CoinParam,
+    ...HistoryParams,
+  },
+  ListOutputSchema,
+  async (params) => {
+    const q = buildHistoryQuery(params.start, params.end, params.limit, params.cursor);
+    const result = await hip4Request(
+      `/orderbook/${normalizeHip4Coin(params.coin)}/l4/history`,
+      q
+    );
+    return formatCursorResponse(result);
+  }
 );
 
 // ---------------------------------------------------------------------------

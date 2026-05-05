@@ -6,29 +6,30 @@
 
 Typed 0xArchive market data tools for MCP-capable clients.
 
-0xArchive is granular market data infrastructure for Hyperliquid and Lighter.xyz. HIP-3 builder perps live under the Hyperliquid namespace. This server exposes 79 typed tools for order books, trades, candles, funding, open interest, liquidations, L4/L3 order-level data, data quality, and wallet-managed auth.
+0xArchive is granular market data infrastructure for Hyperliquid and Lighter.xyz. HIP-3 builder perps and HIP-4 outcome markets live under the Hyperliquid namespace. This server exposes 98 typed tools for order books, trades, candles, funding, open interest, liquidations, L4/L3 order-level data, outcome markets, data quality, and wallet-managed auth.
 
 Use MCP when you want typed tools or shared client config across any client that supports MCP, including Claude Code, Claude Desktop, Cursor, Codex CLI or IDE setups with MCP enabled, and other agent clients. Claude Code and GPT Codex are equal first-class coding-agent paths: use this server wherever MCP is available, and use the same API key with the CLI, SDKs, skills, `llms.txt`, OpenAPI, and markdown docs wherever shell, repo, or file context is the better route.
 
 ## First Tool Result
 
-This repository currently builds the MCP server from source. A published-package install path is blocked until the package dependency cleanup from public PR #6 is verified and released.
+The MCP server is published to npm as `@0xarchive/mcp-server`. Install it globally or run it on demand with `npx`:
 
 ```bash
-git clone https://github.com/0xArchiveIO/0xarchive-mcp.git
-cd 0xarchive-mcp
-npm install
-npm run build
+# Option A: install globally
+npm install -g @0xarchive/mcp-server
+
+# Option B: one-shot with npx (no install needed)
+npx -y @0xarchive/mcp-server
 
 export OXARCHIVE_API_KEY="0xa_your_api_key"
 
-# Claude Code command mechanics
+# Claude Code command mechanics (npx form, no local checkout required)
 claude mcp add 0xarchive -s user -t stdio \
   -e OXARCHIVE_API_KEY="$OXARCHIVE_API_KEY" \
-  -- node "$(pwd)/build/index.js"
+  -- npx -y @0xarchive/mcp-server
 ```
 
-The `claude mcp add` line is a Claude Code setup mechanic. Codex CLI or IDE users with MCP enabled should register the same stdio command in their Codex MCP config: `node /absolute/path/to/0xarchive-mcp/build/index.js`. Ask one narrow question first:
+The `claude mcp add` line is a Claude Code setup mechanic. Codex CLI or IDE users with MCP enabled should register the same stdio command in their Codex MCP config: `npx -y @0xarchive/mcp-server`. Ask one narrow question first:
 
 > What's BTC's current funding rate?
 
@@ -38,10 +39,10 @@ Expected result: the client invokes a concrete 0xArchive MCP tool and returns li
 
 | Agent surface | Requirement | Setup mechanic |
 | --- | --- | --- |
-| Claude Code | Claude Code MCP support and a local Node build | `claude mcp add ... -- node /absolute/path/to/build/index.js` |
-| Claude Desktop | Desktop MCP JSON config | Add the stdio server to `claude_desktop_config.json` |
-| GPT Codex | Codex CLI or IDE extension with MCP enabled | Configure Codex MCP to run the same stdio command; if MCP is unavailable, use the CLI, SDKs, skills, `llms.txt`, OpenAPI, or markdown docs |
-| Other MCP clients | Local stdio MCP support | Run `node /absolute/path/to/0xarchive-mcp/build/index.js` with `OXARCHIVE_API_KEY` in the environment |
+| Claude Code | Claude Code MCP support and Node 18+ | `claude mcp add ... -- npx -y @0xarchive/mcp-server` |
+| Claude Desktop | Desktop MCP JSON config | Add the stdio server to `claude_desktop_config.json` (command: `npx`, args: `["-y", "@0xarchive/mcp-server"]`) |
+| GPT Codex | Codex CLI or IDE extension with MCP enabled | Configure Codex MCP to run the same `npx -y @0xarchive/mcp-server` stdio command; if MCP is unavailable, use the CLI, SDKs, skills, `llms.txt`, OpenAPI, or markdown docs |
+| Other MCP clients | Local stdio MCP support | Run `npx -y @0xarchive/mcp-server` with `OXARCHIVE_API_KEY` in the environment |
 
 ## Choose This Or Another Agent Path
 
@@ -66,29 +67,33 @@ Expected result: the client invokes a concrete 0xArchive MCP tool and returns li
 | "Get BTC orderbook with 20 levels" | `get_orderbook` |
 | "Any data incidents this month?" | `get_data_incidents` |
 | "What's the km:US500 price on HIP-3?" | `get_hip3_summary` |
+| "List active HIP-4 outcome markets" | `get_hip4_outcomes` |
 | "Show me the SLA report for January 2026" | `get_data_sla` |
 
 ## Setup
 
-### 1. Install & Build
+### 1. Install
 
 ```bash
-git clone https://github.com/0xArchiveIO/0xarchive-mcp.git
-cd 0xarchive-mcp
-npm install
-npm run build
+# Global install
+npm install -g @0xarchive/mcp-server
+
+# Or run on demand without installing
+npx -y @0xarchive/mcp-server
 ```
 
 ### 2. Get an API Key
 
-Create an account at [0xArchive signup](https://www.0xarchive.io/signup), generate an API key, and set `OXARCHIVE_API_KEY`. Or use the `web3_challenge` and `web3_signup` tools to get a free API key with just an Ethereum wallet — no browser needed.
+Create an account at [0xArchive signup](https://www.0xarchive.io/signup), generate an API key, and set `OXARCHIVE_API_KEY`. Or use the `web3_challenge` and `web3_signup` tools to get a free API key with just an Ethereum wallet, no browser needed.
 
 ### 3. Add to an MCP client
 
 Claude Code command mechanics:
 
 ```bash
-claude mcp add 0xarchive -s user -t stdio -e OXARCHIVE_API_KEY=0xa_your_api_key -- node /absolute/path/to/0xarchive-mcp/build/index.js
+claude mcp add 0xarchive -s user -t stdio \
+  -e OXARCHIVE_API_KEY=0xa_your_api_key \
+  -- npx -y @0xarchive/mcp-server
 ```
 
 ### 4. Add to Claude Desktop
@@ -99,8 +104,8 @@ Add to your `claude_desktop_config.json`:
 {
   "mcpServers": {
     "0xarchive": {
-      "command": "node",
-      "args": ["/absolute/path/to/0xarchive-mcp/build/index.js"],
+      "command": "npx",
+      "args": ["-y", "@0xarchive/mcp-server"],
       "env": {
         "OXARCHIVE_API_KEY": "0xa_your_api_key"
       }
@@ -111,7 +116,7 @@ Add to your `claude_desktop_config.json`:
 
 For GPT Codex and other agent workflows, use this same stdio server command wherever your client supports local MCP servers. If MCP is not available there, route the same API key through the CLI, SDKs, skills, markdown docs, `llms.txt`, or OpenAPI. The acquisition path is shared: make one authenticated request, then expand into replay, SDKs, Data Catalog exports, or agent tooling.
 
-## Available Tools (79)
+## Available Tools (98)
 
 ### Hyperliquid
 
@@ -193,6 +198,32 @@ For GPT Codex and other agent workflows, use this same stdio server command wher
 | `get_hip3_l2_orderbook_history` | HIP-3 L2 full-depth orderbook history (Build+ tier) |
 | `get_hip3_l2_diffs` | HIP-3 L2 tick-level diffs (Pro+ tier) |
 
+### HIP-4 (Outcome Markets)
+
+HIP-4 coins use the bare numeric format `<10*outcome_id + side>` (e.g. `0` for outcome 0 Yes, `1` for outcome 0 No). Legacy `#0` / `%230` forms are still accepted. `mark_price` for HIP-4 is an implied probability in [0,1], not a USD price. HIP-4 has no funding, no liquidations, and no candles by design. Listen for the WebSocket `outcome_settled` event to be notified when an outcome resolves.
+
+| Tool | Description |
+|------|-------------|
+| `get_hip4_instruments` | List HIP-4 outcome-market instruments (one row per side) |
+| `get_hip4_instrument` | Get a single HIP-4 instrument by coin (e.g. `0`) |
+| `get_hip4_outcomes` | List HIP-4 outcomes (filter `is_settled` optional) |
+| `get_hip4_outcome` | Single outcome detail including `aggregated_oi` |
+| `get_hip4_orderbook` | Current HIP-4 L2 orderbook (Pro+ tier) |
+| `get_hip4_orderbook_history` | Historical HIP-4 L2 orderbook snapshots (Pro+ tier) |
+| `get_hip4_trades` | HIP-4 trade history |
+| `get_hip4_trades_recent` | Most recent HIP-4 trades |
+| `get_hip4_open_interest` | HIP-4 per-side open interest history |
+| `get_hip4_open_interest_current` | Current HIP-4 per-side open interest |
+| `get_hip4_freshness` | Per-coin HIP-4 data freshness and lag |
+| `get_hip4_summary` | Combined HIP-4 24h summary (probability, volume, OI) |
+| `get_hip4_prices` | HIP-4 mid-price (implied probability) history |
+| `get_hip4_order_history` | HIP-4 order lifecycle events (Pro+ tier) |
+| `get_hip4_order_flow` | HIP-4 aggregated order placement/cancel/fill metrics (Pro+ tier) |
+| `get_hip4_tpsl` | HIP-4 TP/SL order history (Pro+ tier) |
+| `get_hip4_l4_orderbook` | HIP-4 L4 orderbook reconstruction (Pro+ tier) |
+| `get_hip4_l4_diffs` | HIP-4 raw order-level changes over a time range (Pro+ tier) |
+| `get_hip4_l4_orderbook_history` | HIP-4 periodic L4 orderbook checkpoints (Build+ tier) |
+
 ### Lighter.xyz
 
 | Tool | Description |
@@ -232,6 +263,21 @@ For GPT Codex and other agent workflows, use this same stdio server command wher
 | `get_data_latency` | WebSocket/REST latency and data freshness |
 | `get_data_sla` | Monthly SLA compliance report |
 
+### Realtime WebSocket Channels
+
+The MCP server exposes the historical REST endpoints. For realtime, point any WebSocket client at `wss://api.0xarchive.io/ws?apiKey=...` and subscribe to:
+
+| Channel | Notes |
+|---------|-------|
+| `trades`, `hip3_trades`, `hip4_trades`, `lighter_trades` | Realtime + replay fills (one row per side per trade) |
+| `liquidations`, `hip3_liquidations` | Realtime + replay liquidations. Each event is a fill row with `is_liquidation: true` (same shape as `trades`). |
+| `orderbook`, `hip3_orderbook`, `hip4_orderbook`, `lighter_orderbook` | Realtime + replay L2 orderbook updates (~1.2 sec resolution) |
+| `hip4_open_interest` | Realtime + replay HIP-4 per-side open interest snapshots |
+| `hip4_l4_diffs`, `hip4_l4_orders`, `l4_diffs`, `l4_orders`, `hip3_l4_diffs`, `hip3_l4_orders` | Order-level events (Pro+, realtime only, no replay) |
+| `outcome_settled` | HIP-4 outcome resolution event. Fired once per outcome when `is_settled` flips to true. |
+
+Build+ tier required for any WebSocket access; Pro+ for L4 channels.
+
 ### Web3 Authentication
 
 | Tool | Description |
@@ -261,9 +307,9 @@ Upgrade at [0xarchive.io/pricing](https://0xarchive.io/pricing).
 
 ## Tool Annotations
 
-All 79 tools carry MCP annotations so clients can reason about safety and retry behavior.
+All 98 tools carry MCP annotations so clients can reason about safety and retry behavior.
 
-**Market data tools (74):**
+**Market data tools (93):**
 
 | Annotation | Value | Meaning |
 |------------|-------|---------|
@@ -272,7 +318,7 @@ All 79 tools carry MCP annotations so clients can reason about safety and retry 
 | `idempotentHint` | `true` | Safe to retry on failure |
 | `openWorldHint` | `true` | Queries an external API |
 
-**Web3 tools (5):** `readOnlyHint: false`, `idempotentHint: false` — these create accounts, keys, and subscriptions.
+**Web3 tools (5):** `readOnlyHint: false`, `idempotentHint: false`. These create accounts, keys, and subscriptions.
 
 All tools also declare an `outputSchema` so clients can validate structured responses.
 
