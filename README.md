@@ -6,7 +6,7 @@
 
 Typed 0xArchive market data tools for MCP-capable clients.
 
-0xArchive is granular market data infrastructure for Hyperliquid and Lighter.xyz. HIP-3 builder perps and HIP-4 outcome markets live under the Hyperliquid namespace. This server exposes 98 typed tools for order books, trades, candles, funding, open interest, liquidations, L4/L3 order-level data, outcome markets, data quality, and wallet-managed auth.
+0xArchive is granular market data infrastructure for Hyperliquid and Lighter.xyz. HIP-3 builder perps, HIP-4 outcome markets, and Hyperliquid Spot all live under the Hyperliquid namespace. This server exposes 111 typed tools for order books, trades, candles, funding, open interest, liquidations, L4/L3 order-level data, outcome markets, spot pairs, TWAP statuses, data quality, and wallet-managed auth.
 
 Use MCP when you want typed tools or shared client config across any client that supports MCP, including Claude Code, Claude Desktop, Cursor, Codex CLI or IDE setups with MCP enabled, and other agent clients. Claude Code and GPT Codex are equal first-class coding-agent paths: use this server wherever MCP is available, and use the same API key with the CLI, SDKs, skills, `llms.txt`, OpenAPI, and markdown docs wherever shell, repo, or file context is the better route.
 
@@ -116,7 +116,7 @@ Add to your `claude_desktop_config.json`:
 
 For GPT Codex and other agent workflows, use this same stdio server command wherever your client supports local MCP servers. If MCP is not available there, route the same API key through the CLI, SDKs, skills, markdown docs, `llms.txt`, or OpenAPI. The acquisition path is shared: make one authenticated request, then expand into replay, SDKs, Data Catalog exports, or agent tooling.
 
-## Available Tools (98)
+## Available Tools (111)
 
 ### Hyperliquid
 
@@ -224,6 +224,26 @@ HIP-4 coins use the bare numeric format `<10*outcome_id + side>` (e.g. `0` for o
 | `get_hip4_l4_diffs` | HIP-4 raw order-level changes over a time range (Pro+ tier) |
 | `get_hip4_l4_orderbook_history` | HIP-4 periodic L4 orderbook checkpoints (Build+ tier) |
 
+### Hyperliquid Spot
+
+Spot pairs use dashed canonical symbols (e.g. `HYPE-USDC`, `PURR-USDC`); the server resolves to Hyperliquid's wire format (`PURR/USDC`, `@107`) internally. 294 pairs covered. Spot has no funding, no open interest, no liquidations, and no candles by design (those are perp-only constructs). Coverage: trades from 2025-03-22 (HL S3 backfill); orderbook, L4, and TWAP statuses live from 2026-05-05.
+
+| Tool | Description |
+|------|-------------|
+| `get_spot_pairs` | List all 294 spot pairs with metadata (base/quote, wire symbol, decimals, latest price) |
+| `get_spot_pair` | Get a single spot pair by dashed symbol (e.g. `HYPE-USDC`) |
+| `get_spot_orderbook` | Current spot L2 orderbook (live from 2026-05-05; Pro+ for full depth) |
+| `get_spot_orderbook_history` | Historical spot L2 orderbook snapshots (live-only from 2026-05-05; Build+) |
+| `get_spot_trades` | Spot trade history with optional user filter (S3 backfill from 2025-03-22) |
+| `get_spot_trades_recent` | Most recent spot trades (live from 2026-05-05) |
+| `get_spot_order_history` | Spot order lifecycle events with user attribution (Pro+ tier) |
+| `get_spot_l4_orderbook` | Spot L4 orderbook reconstruction at a specific timestamp (Pro+ tier) |
+| `get_spot_l4_diffs` | Spot raw order-level changes over a time range (Pro+ tier) |
+| `get_spot_l4_orderbook_history` | Spot periodic L4 orderbook checkpoints (Build+ tier) |
+| `get_spot_twap_by_symbol` | Spot TWAP statuses for a single pair (live from 2026-05-05) |
+| `get_spot_twap_by_user` | Spot TWAP statuses for a single user wallet across all pairs |
+| `get_spot_freshness` | Per-pair spot data freshness and lag |
+
 ### Lighter.xyz
 
 | Tool | Description |
@@ -307,9 +327,9 @@ Upgrade at [0xarchive.io/pricing](https://0xarchive.io/pricing).
 
 ## Tool Annotations
 
-All 98 tools carry MCP annotations so clients can reason about safety and retry behavior.
+All 111 tools carry MCP annotations so clients can reason about safety and retry behavior.
 
-**Market data tools (93):**
+**Market data tools (106):**
 
 | Annotation | Value | Meaning |
 |------------|-------|---------|

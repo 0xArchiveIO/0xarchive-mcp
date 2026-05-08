@@ -24,14 +24,14 @@ async function withClient(fn) {
   }
 }
 
-test("MCP server lists 98 tools at version 1.8.0", async () => {
+test("MCP server lists 111 tools at version 1.9.0", async () => {
   await withClient(async (client) => {
     const info = client.getServerVersion();
     assert.equal(info?.name, "0xarchive");
-    assert.equal(info?.version, "1.8.0");
+    assert.equal(info?.version, "1.9.0");
 
     const { tools } = await client.listTools();
-    assert.equal(tools.length, 98, `expected 98 tools, got ${tools.length}`);
+    assert.equal(tools.length, 111, `expected 111 tools, got ${tools.length}`);
   });
 });
 
@@ -145,6 +145,92 @@ test("get_hip4_outcomes description mentions outcome_settled event", async () =>
     assert.ok(tool, "get_hip4_outcomes not found");
     assert.ok(/outcome_settled/i.test(tool.description ?? ""),
       "get_hip4_outcomes should mention the WebSocket `outcome_settled` event");
+  });
+});
+
+test("Spot tools are registered", async () => {
+  await withClient(async (client) => {
+    const { tools } = await client.listTools();
+    const names = new Set(tools.map((t) => t.name));
+
+    const expected = [
+      "get_spot_pairs",
+      "get_spot_pair",
+      "get_spot_orderbook",
+      "get_spot_orderbook_history",
+      "get_spot_trades",
+      "get_spot_trades_recent",
+      "get_spot_order_history",
+      "get_spot_l4_orderbook",
+      "get_spot_l4_diffs",
+      "get_spot_l4_orderbook_history",
+      "get_spot_twap_by_symbol",
+      "get_spot_twap_by_user",
+      "get_spot_freshness",
+    ];
+    for (const name of expected) {
+      assert.ok(names.has(name), `missing Spot tool: ${name}`);
+    }
+  });
+});
+
+test("Spot explicitly excluded tools are NOT registered", async () => {
+  await withClient(async (client) => {
+    const { tools } = await client.listTools();
+    const names = new Set(tools.map((t) => t.name));
+
+    const excluded = [
+      "get_spot_candles",
+      "get_spot_funding",
+      "get_spot_funding_current",
+      "get_spot_funding_history",
+      "get_spot_open_interest",
+      "get_spot_open_interest_history",
+      "get_spot_liquidations",
+      "get_spot_liquidation_volume",
+      "get_spot_instruments",
+      "get_spot_transfers",
+    ];
+    for (const name of excluded) {
+      assert.ok(!names.has(name), `tool should NOT exist: ${name}`);
+    }
+  });
+});
+
+test("get_spot_orderbook input schema requires coin and accepts depth", async () => {
+  await withClient(async (client) => {
+    const { tools } = await client.listTools();
+    const tool = tools.find((t) => t.name === "get_spot_orderbook");
+    assert.ok(tool, "get_spot_orderbook not found");
+    const schema = tool.inputSchema;
+    assert.equal(schema.type, "object");
+    assert.ok(schema.properties.coin, "coin property missing");
+    assert.equal(schema.properties.coin.type, "string");
+    assert.ok(
+      Array.isArray(schema.required) && schema.required.includes("coin"),
+      "coin should be required"
+    );
+    assert.ok(schema.properties.depth, "depth property missing");
+    const desc = (tool.description ?? "").toLowerCase();
+    assert.ok(
+      desc.includes("dashed") || desc.includes("hype-usdc"),
+      "description should explain dashed canonical spot symbol format"
+    );
+  });
+});
+
+test("get_spot_twap_by_user input schema requires address", async () => {
+  await withClient(async (client) => {
+    const { tools } = await client.listTools();
+    const tool = tools.find((t) => t.name === "get_spot_twap_by_user");
+    assert.ok(tool, "get_spot_twap_by_user not found");
+    const schema = tool.inputSchema;
+    assert.equal(schema.type, "object");
+    assert.ok(schema.properties.address, "address property missing");
+    assert.ok(
+      Array.isArray(schema.required) && schema.required.includes("address"),
+      "address should be required"
+    );
   });
 });
 
