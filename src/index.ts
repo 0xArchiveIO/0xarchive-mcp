@@ -35,7 +35,7 @@ const MISSING_KEY_MESSAGE =
 
 const server = new McpServer({
   name: "0xarchive",
-  version: "1.8.0",
+  version: "1.9.0",
 });
 
 // All tools are read-only, idempotent API queries to an external service
@@ -73,6 +73,12 @@ const Hip4OutcomeIdParam = z
 const LighterCoinParam = z
   .string()
   .describe("Lighter.xyz coin symbol, e.g. 'BTC', 'ETH'");
+
+const SpotCoinParam = z
+  .string()
+  .describe(
+    "Hyperliquid Spot dashed canonical pair symbol (e.g. 'HYPE-USDC', 'PURR-USDC'). 294 pairs available. The server resolves the dashed form to Hyperliquid's wire format ('PURR/USDC', '@107') internally. Use get_spot_pairs to list all."
+  );
 
 const TimestampParam = z
   .union([z.number(), z.string()])
@@ -308,6 +314,10 @@ function normalizeHip4Coin(coin: string): string {
 }
 
 function normalizeLighterCoin(coin: string): string {
+  return coin.toUpperCase();
+}
+
+function normalizeSpotCoin(coin: string): string {
   return coin.toUpperCase();
 }
 
@@ -1295,6 +1305,177 @@ registerHistoryTool(
 );
 
 // ---------------------------------------------------------------------------
+// Tool Registration — Hyperliquid Spot
+// ---------------------------------------------------------------------------
+// Spot has no funding, no open interest, no liquidations, and no candles by
+// design (those are perp-only constructs). Symbols are dashed canonical
+// (HYPE-USDC); the server resolves to wire format internally.
+// Coverage: trades from 2025-03-22; orderbook + L4 + TWAP live from 2026-05-05.
+
+// Spot Pairs (list)
+registerInstrumentsTool(
+  "get_spot_pairs",
+  "List all Hyperliquid Spot pairs with metadata (base/quote asset, wire symbol, asset index, decimals, latest mark/mid price, active status). 294 pairs available. Symbols are dashed canonical (e.g. 'HYPE-USDC', 'PURR-USDC'). Use this to discover valid spot pair symbols before querying other spot tools.",
+  () => api().spot.pairs.list()
+);
+
+// Spot Pair (single)
+registerCurrentTool(
+  "get_spot_pair",
+  "Get details for a single Hyperliquid Spot pair by dashed canonical symbol (e.g. 'HYPE-USDC'). Returns base/quote asset, wire symbol, asset index, decimals, latest mark/mid price, and active status.",
+  (coin) => api().spot.pairs.get(coin),
+  SpotCoinParam,
+  normalizeSpotCoin
+);
+
+// Spot Orderbook (current)
+registerOrderbookTool(
+  "get_spot_orderbook",
+  "Get the current Hyperliquid Spot L2 orderbook snapshot for a pair. Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns bids, asks, mid price, and spread. Optionally specify depth (price levels per side). Live from 2026-05-05. Pro+ tier required for full depth.",
+  (coin, params) => api().spot.orderbook.get(coin, params),
+  SpotCoinParam,
+  normalizeSpotCoin
+);
+
+// Spot Orderbook History
+registerHistoryTool(
+  "get_spot_orderbook_history",
+  "Get historical Hyperliquid Spot L2 orderbook snapshots over a time range. Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns L2 snapshots with bids/asks. Live coverage from 2026-05-05 (no historical backfill before that date because Hyperliquid does not publish historical spot orderbook data). Build+ tier required for non-default depth.",
+  (coin, params) =>
+    api().spot.orderbook.history(coin, params as any),
+  SpotCoinParam,
+  normalizeSpotCoin,
+  { depth: DepthParam }
+);
+
+// Spot Trades
+registerHistoryTool(
+  "get_spot_trades",
+  "Get Hyperliquid Spot trade/fill history for a pair over a time range. Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns price, size, side, timestamps, and user addresses. S3 backfill from 2025-03-22 (the earliest published date); live since. Supports cursor pagination and optional user wallet filter.",
+  (coin, params) =>
+    api().spot.trades.list(coin, params as any),
+  SpotCoinParam,
+  normalizeSpotCoin,
+  { user: UserParam }
+);
+
+// Spot Recent Trades
+registerTool(
+  "get_spot_trades_recent",
+  "Get the most recent Hyperliquid Spot trades for a pair. Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns the latest trades without needing a time range. Live since 2026-05-05.",
+  {
+    coin: SpotCoinParam,
+    limit: LimitParam,
+  },
+  ListOutputSchema,
+  async (params) => {
+    const data = await api().spot.trades.recent(
+      normalizeSpotCoin(params.coin),
+      params.limit
+    );
+    return formatResponse(data);
+  }
+);
+
+// Spot Order History (Pro+)
+registerHistoryTool(
+  "get_spot_order_history",
+  "Get Hyperliquid Spot order lifecycle events with user attribution (Pro+ tier). Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns placements, fills, cancellations, and modifications with user addresses. Live from 2026-05-05.",
+  (coin, params) =>
+    api().spot.orders.history(coin, params as any),
+  SpotCoinParam,
+  normalizeSpotCoin,
+  {
+    user: UserParam,
+    status: OrderStatusParam,
+    order_type: OrderTypeParam,
+  }
+);
+
+// Spot L4 Orderbook (current reconstruction, Pro+)
+registerTool(
+  "get_spot_l4_orderbook",
+  "Get Hyperliquid Spot L4 orderbook reconstruction at a specific timestamp (Pro+ tier). Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns the full order-level orderbook with individual order IDs, user addresses, prices, and sizes. Live from 2026-05-05.",
+  {
+    coin: SpotCoinParam,
+    timestamp: TimestampParam.describe("Timestamp for orderbook reconstruction (Unix ms or ISO)"),
+    depth: DepthParam,
+  },
+  ObjectOutputSchema,
+  async (params) => {
+    const sdkParams: Record<string, unknown> = {};
+    if (params.timestamp != null) sdkParams.timestamp = toUnixMs(params.timestamp);
+    if (params.depth) sdkParams.depth = params.depth;
+    const data = await api().spot.l4Orderbook.get(
+      normalizeSpotCoin(params.coin),
+      sdkParams as any
+    );
+    return formatResponse(data);
+  }
+);
+
+// Spot L4 Orderbook Diffs (Pro+)
+registerHistoryTool(
+  "get_spot_l4_diffs",
+  "Get Hyperliquid Spot L4 orderbook diffs (Pro+ tier). Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns raw order-level changes (new orders, modifications, cancellations, fills) over a time range. Live from 2026-05-05.",
+  (coin, params) =>
+    api().spot.l4Orderbook.diffs(coin, params as any),
+  SpotCoinParam,
+  normalizeSpotCoin
+);
+
+// Spot L4 Orderbook History / Checkpoints (Build+)
+registerHistoryTool(
+  "get_spot_l4_orderbook_history",
+  "Get Hyperliquid Spot L4 orderbook checkpoints (Build+ tier). Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns periodic full order-level orderbook snapshots over a time range for reconstruction. Live from 2026-05-05.",
+  (coin, params) =>
+    api().spot.l4Orderbook.history(coin, params as any),
+  SpotCoinParam,
+  normalizeSpotCoin
+);
+
+// Spot TWAP by Symbol
+registerHistoryTool(
+  "get_spot_twap_by_symbol",
+  "Get Hyperliquid Spot TWAP statuses for a single pair (every TWAP touching this pair). Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns timestamped TWAP status records with twap_id, user_address, side, size, filled_size, status, and execution metadata. Sourced from the L4 order stream. Live from 2026-05-05.",
+  (coin, params) =>
+    api().spot.twap.bySymbol(coin, params as any),
+  SpotCoinParam,
+  normalizeSpotCoin
+);
+
+// Spot TWAP by User
+registerTool(
+  "get_spot_twap_by_user",
+  "Get Hyperliquid Spot TWAP statuses for a single user wallet across every spot pair. Returns timestamped TWAP status records with coin, twap_id, side, size, filled_size, status, and execution metadata. Sourced from the L4 order stream. Live from 2026-05-05.",
+  {
+    address: z.string().describe("User wallet address (e.g., '0x1234...')"),
+    ...HistoryParams,
+  },
+  ListOutputSchema,
+  async (params) => {
+    const { address, start, end, limit, cursor } = params;
+    const timeRange = resolveTimeRange(start, end);
+    const sdkParams: Record<string, unknown> = {
+      ...timeRange,
+      limit: resolveLimit(limit),
+    };
+    if (cursor) sdkParams.cursor = cursor;
+    const result = await api().spot.twap.byUser(address, sdkParams as any);
+    return formatCursorResponse(result);
+  }
+);
+
+// Spot Freshness
+registerCurrentTool(
+  "get_spot_freshness",
+  "Get per-pair data freshness for Hyperliquid Spot across all data types (orderbook, trades, L4, TWAP). Symbols are dashed canonical (e.g. 'HYPE-USDC'). Shows when each data type was last updated and current lag.",
+  (coin) => api().spot.freshness(coin),
+  SpotCoinParam,
+  normalizeSpotCoin
+);
+
+// ---------------------------------------------------------------------------
 // Tool Registration — HIP-4 (Outcome Markets)
 // ---------------------------------------------------------------------------
 // SDK 1.4.0 has no `hip4` namespace. Until it lands, HIP-4 tools call the REST
@@ -1316,7 +1497,7 @@ async function hip4Request(
   }
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "User-Agent": "0xarchive-mcp/1.8.0",
+    "User-Agent": "0xarchive-mcp/1.9.0",
   };
   if (apiKey) headers["X-API-Key"] = apiKey;
 

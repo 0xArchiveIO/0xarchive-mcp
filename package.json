@@ -1,7 +1,7 @@
 {
   "name": "@0xarchive/mcp-server",
-  "version": "1.8.0",
-  "description": "MCP server that gives coding agents typed 0xArchive market data tools",
+  "version": "1.9.0",
+  "description": "MCP server that gives coding agents typed 0xArchive market data tools across Hyperliquid (perps, HIP-3, HIP-4, spot) and Lighter.xyz",
   "type": "module",
   "bin": {
     "0xarchive-mcp": "./build/index.js"
@@ -17,7 +17,7 @@
     "test": "npm run build && node --test test/*.test.mjs"
   },
   "dependencies": {
-    "@0xarchive/sdk": "^1.4.0",
+    "@0xarchive/sdk": "^1.7.0",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "zod": "^3.23.0"
   },
