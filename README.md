@@ -6,30 +6,26 @@
 
 Typed 0xArchive market data tools for MCP-capable clients.
 
-0xArchive is granular market data infrastructure for Hyperliquid and Lighter.xyz. HIP-3 builder perps, HIP-4 outcome markets, and Hyperliquid Spot all live under the Hyperliquid namespace. This server exposes 111 typed tools for order books, trades, candles, funding, open interest, liquidations, L4/L3 order-level data, outcome markets, spot pairs, TWAP statuses, data quality, and wallet-managed auth.
+0xArchive is granular market data infrastructure for Hyperliquid and Lighter.xyz. Hyperliquid includes core perps, HIP-3 builder perps, HIP-4 outcome markets, and Hyperliquid Spot; Lighter.xyz is the second top-level venue API. This server exposes 111 typed tools for order books, trades, candles, funding, open interest, liquidations, L4/L3 order-level data, outcome markets, spot pairs, TWAP statuses, data quality, and wallet-managed auth.
 
-Use MCP when you want typed tools or shared client config across any client that supports MCP, including Claude Code, Claude Desktop, Cursor, Codex CLI or IDE setups with MCP enabled, and other agent clients. Claude Code and GPT Codex are equal first-class coding-agent paths: use this server wherever MCP is available, and use the same API key with the CLI, SDKs, skills, `llms.txt`, OpenAPI, and markdown docs wherever shell, repo, or file context is the better route.
+Use MCP when you want typed tools or shared client config across any client that supports MCP, including Claude Code, Claude Desktop, Cursor, ChatGPT Codex setups with MCP enabled, and other agent clients. Claude Code and ChatGPT Codex are equal first-class coding-agent paths: use this server wherever MCP is available, and use the same API key with the CLI, SDKs, skills, `llms.txt`, OpenAPI, and markdown docs wherever shell, repo, or file context is the better route.
 
 ## First Tool Result
 
-The MCP server is published to npm as `@0xarchive/mcp-server`. Install it globally or run it on demand with `npx`:
+Install the MCP server package in the project or agent workspace where the MCP client will run:
 
 ```bash
-# Option A: install globally
-npm install -g @0xarchive/mcp-server
-
-# Option B: one-shot with npx (no install needed)
-npx -y @0xarchive/mcp-server
+npm install @0xarchive/mcp-server
 
 export OXARCHIVE_API_KEY="0xa_your_api_key"
 
-# Claude Code command mechanics (npx form, no local checkout required)
+# Claude Code command mechanics
 claude mcp add 0xarchive -s user -t stdio \
   -e OXARCHIVE_API_KEY="$OXARCHIVE_API_KEY" \
   -- npx -y @0xarchive/mcp-server
 ```
 
-The `claude mcp add` line is a Claude Code setup mechanic. Codex CLI or IDE users with MCP enabled should register the same stdio command in their Codex MCP config: `npx -y @0xarchive/mcp-server`. Ask one narrow question first:
+The `claude mcp add` line is a Claude Code setup mechanic. ChatGPT Codex users with MCP enabled should register the same stdio command in their Codex MCP config: `npx -y @0xarchive/mcp-server`. Ask one narrow question first:
 
 > What's BTC's current funding rate?
 
@@ -41,7 +37,7 @@ Expected result: the client invokes a concrete 0xArchive MCP tool and returns li
 | --- | --- | --- |
 | Claude Code | Claude Code MCP support and Node 18+ | `claude mcp add ... -- npx -y @0xarchive/mcp-server` |
 | Claude Desktop | Desktop MCP JSON config | Add the stdio server to `claude_desktop_config.json` (command: `npx`, args: `["-y", "@0xarchive/mcp-server"]`) |
-| GPT Codex | Codex CLI or IDE extension with MCP enabled | Configure Codex MCP to run the same `npx -y @0xarchive/mcp-server` stdio command; if MCP is unavailable, use the CLI, SDKs, skills, `llms.txt`, OpenAPI, or markdown docs |
+| ChatGPT Codex | ChatGPT Codex with MCP enabled | Configure Codex MCP to run the same `npx -y @0xarchive/mcp-server` stdio command; if MCP is unavailable, use the CLI, SDKs, skills, `llms.txt`, OpenAPI, or markdown docs |
 | Other MCP clients | Local stdio MCP support | Run `npx -y @0xarchive/mcp-server` with `OXARCHIVE_API_KEY` in the environment |
 
 ## Choose This Or Another Agent Path
@@ -50,7 +46,7 @@ Expected result: the client invokes a concrete 0xArchive MCP tool and returns li
 | --- | --- |
 | Typed tools or shared MCP config | This MCP server |
 | Fast local agent setup | [AI Clients guide](https://www.0xarchive.io/docs/ai-clients) |
-| Claude Code, GPT Codex, or other shell-first coding-agent work | [CLI](https://www.0xarchive.io/docs/cli) |
+| Claude Code, ChatGPT Codex, or other shell-first coding-agent work | [CLI](https://www.0xarchive.io/docs/cli) |
 | Direct SDK integration | [SDK docs](https://www.0xarchive.io/docs/sdks) |
 | File-based historical pulls | [Data Catalog](https://www.0xarchive.io/data) |
 | Machine-readable context | [llms.txt](https://www.0xarchive.io/llms.txt), [OpenAPI](https://www.0xarchive.io/openapi.json) |
@@ -75,11 +71,7 @@ Expected result: the client invokes a concrete 0xArchive MCP tool and returns li
 ### 1. Install
 
 ```bash
-# Global install
-npm install -g @0xarchive/mcp-server
-
-# Or run on demand without installing
-npx -y @0xarchive/mcp-server
+npm install @0xarchive/mcp-server
 ```
 
 ### 2. Get an API Key
@@ -114,7 +106,7 @@ Add to your `claude_desktop_config.json`:
 }
 ```
 
-For GPT Codex and other agent workflows, use this same stdio server command wherever your client supports local MCP servers. If MCP is not available there, route the same API key through the CLI, SDKs, skills, markdown docs, `llms.txt`, or OpenAPI. The acquisition path is shared: make one authenticated request, then expand into replay, SDKs, Data Catalog exports, or agent tooling.
+For ChatGPT Codex and other agent workflows, use this same stdio server command wherever your client supports local MCP servers. If MCP is not available there, route the same API key through the CLI, SDKs, skills, markdown docs, `llms.txt`, or OpenAPI. The acquisition path is shared: make one authenticated request, then expand into replay, SDKs, Data Catalog exports, or agent tooling.
 
 ## Available Tools (111)
 
@@ -353,3 +345,13 @@ All tools also declare an `outputSchema` so clients can validate structured resp
 ## Data Catalog
 
 For large-scale data exports (full order books, complete trade history, etc.), use the [Data Catalog](https://www.0xarchive.io/data). It lets you choose markets, datasets, and date ranges, see a live quote, and export zstd-compressed Parquet. MCP tools are best for typed point queries and moderate data pulls; the Data Catalog is the file-export path.
+
+## Links
+
+- [API Docs](https://www.0xarchive.io/docs)
+- [Python SDK](https://pypi.org/project/oxarchive/)
+- [TypeScript SDK](https://npmjs.com/package/@0xarchive/sdk)
+- [Rust SDK](https://crates.io/crates/oxarchive)
+- [CLI](https://npmjs.com/package/@0xarchive/cli)
+- [0xArchive Skill](https://github.com/0xArchiveIO/0xarchive-skill)
+- [Examples](https://github.com/0xArchiveIO/examples)
