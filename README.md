@@ -137,20 +137,20 @@ For ChatGPT Codex and other agent workflows, use this same stdio server command 
 
 | Tool | Description |
 |------|-------------|
-| `get_order_history` | Order history with user attribution (Build+ tier) |
-| `get_order_flow` | Aggregated order placement, cancellation, and fill metrics (Build+ tier) |
-| `get_tpsl` | TP/SL order history with trigger prices and triggered status (Pro+ tier) |
-| `get_l4_orderbook` | L4 orderbook reconstruction at a specific timestamp (Pro+ tier) |
-| `get_l4_diffs` | Raw order-level changes (new, modified, cancelled, filled) over a time range (Pro+ tier) |
-| `get_l4_orderbook_history` | Periodic full order-level orderbook checkpoints (Pro+ tier) |
+| `get_order_history` | Order history with user attribution |
+| `get_order_flow` | Aggregated order placement, cancellation, and fill metrics |
+| `get_tpsl` | TP/SL order history with trigger prices and triggered status |
+| `get_l4_orderbook` | L4 orderbook reconstruction at a specific timestamp |
+| `get_l4_diffs` | Raw order-level changes (new, modified, cancelled, filled) over a time range |
+| `get_l4_orderbook_history` | Periodic full order-level orderbook checkpoints |
 
 ### Hyperliquid L2 (Full-Depth)
 
 | Tool | Description |
 |------|-------------|
-| `get_l2_orderbook` | L2 full-depth orderbook derived from L4 (Build+ tier) |
-| `get_l2_orderbook_history` | Historical L2 full-depth orderbook snapshots (Build+ tier) |
-| `get_l2_diffs` | L2 tick-level diffs (Pro+ tier) |
+| `get_l2_orderbook` | L2 full-depth orderbook derived from L4 |
+| `get_l2_orderbook_history` | Historical L2 full-depth orderbook snapshots |
+| `get_l2_diffs` | L2 tick-level diffs |
 
 ### HIP-3 (Builder Perps)
 
@@ -177,20 +177,20 @@ For ChatGPT Codex and other agent workflows, use this same stdio server command 
 
 | Tool | Description |
 |------|-------------|
-| `get_hip3_order_history` | HIP-3 order history with user attribution (Build+ tier) |
-| `get_hip3_order_flow` | Aggregated HIP-3 order placement, cancellation, and fill metrics (Build+ tier) |
-| `get_hip3_tpsl` | HIP-3 TP/SL order history with trigger prices and triggered status (Pro+ tier) |
-| `get_hip3_l4_orderbook` | HIP-3 L4 orderbook reconstruction at a specific timestamp (Pro+ tier) |
-| `get_hip3_l4_diffs` | HIP-3 raw order-level changes over a time range (Pro+ tier) |
-| `get_hip3_l4_orderbook_history` | HIP-3 periodic full order-level orderbook checkpoints (Pro+ tier) |
+| `get_hip3_order_history` | HIP-3 order history with user attribution |
+| `get_hip3_order_flow` | Aggregated HIP-3 order placement, cancellation, and fill metrics |
+| `get_hip3_tpsl` | HIP-3 TP/SL order history with trigger prices and triggered status |
+| `get_hip3_l4_orderbook` | HIP-3 L4 orderbook reconstruction at a specific timestamp |
+| `get_hip3_l4_diffs` | HIP-3 raw order-level changes over a time range |
+| `get_hip3_l4_orderbook_history` | HIP-3 periodic full order-level orderbook checkpoints |
 
 ### HIP-3 L2 (Full-Depth)
 
 | Tool | Description |
 |------|-------------|
-| `get_hip3_l2_orderbook` | HIP-3 L2 full-depth orderbook derived from L4 (Build+ tier) |
-| `get_hip3_l2_orderbook_history` | HIP-3 L2 full-depth orderbook history (Build+ tier) |
-| `get_hip3_l2_diffs` | HIP-3 L2 tick-level diffs (Pro+ tier) |
+| `get_hip3_l2_orderbook` | HIP-3 L2 full-depth orderbook derived from L4 |
+| `get_hip3_l2_orderbook_history` | HIP-3 L2 full-depth orderbook history |
+| `get_hip3_l2_diffs` | HIP-3 L2 tick-level diffs |
 
 ### HIP-4 (Outcome Markets)
 
@@ -202,8 +202,8 @@ HIP-4 coins use the bare numeric format `<10*outcome_id + side>` (e.g. `0` for o
 | `get_hip4_instrument` | Get a single HIP-4 instrument by coin (e.g. `0`) |
 | `get_hip4_outcomes` | List HIP-4 outcomes (filter `is_settled` optional) |
 | `get_hip4_outcome` | Single outcome detail including `aggregated_oi` |
-| `get_hip4_orderbook` | Current HIP-4 L2 orderbook (Pro+ tier) |
-| `get_hip4_orderbook_history` | Historical HIP-4 L2 orderbook snapshots (Pro+ tier) |
+| `get_hip4_orderbook` | Current HIP-4 L2 orderbook |
+| `get_hip4_orderbook_history` | Historical HIP-4 L2 orderbook snapshots |
 | `get_hip4_trades` | HIP-4 trade history |
 | `get_hip4_trades_recent` | Most recent HIP-4 trades |
 | `get_hip4_open_interest` | HIP-4 per-side open interest history |
@@ -211,12 +211,12 @@ HIP-4 coins use the bare numeric format `<10*outcome_id + side>` (e.g. `0` for o
 | `get_hip4_freshness` | Per-coin HIP-4 data freshness and lag |
 | `get_hip4_summary` | Combined HIP-4 24h summary (probability, volume, OI) |
 | `get_hip4_prices` | HIP-4 mid-price (implied probability) history |
-| `get_hip4_order_history` | HIP-4 order lifecycle events (Pro+ tier) |
-| `get_hip4_order_flow` | HIP-4 aggregated order placement/cancel/fill metrics (Pro+ tier) |
-| `get_hip4_tpsl` | HIP-4 TP/SL order history (Pro+ tier) |
-| `get_hip4_l4_orderbook` | HIP-4 L4 orderbook reconstruction (Pro+ tier) |
-| `get_hip4_l4_diffs` | HIP-4 raw order-level changes over a time range (Pro+ tier) |
-| `get_hip4_l4_orderbook_history` | HIP-4 periodic L4 orderbook checkpoints (Build+ tier) |
+| `get_hip4_order_history` | HIP-4 order lifecycle events |
+| `get_hip4_order_flow` | HIP-4 aggregated order placement/cancel/fill metrics |
+| `get_hip4_tpsl` | HIP-4 TP/SL order history |
+| `get_hip4_l4_orderbook` | HIP-4 L4 orderbook reconstruction |
+| `get_hip4_l4_diffs` | HIP-4 raw order-level changes over a time range |
+| `get_hip4_l4_orderbook_history` | HIP-4 periodic L4 orderbook checkpoints |
 
 ### Hyperliquid Spot
 
@@ -226,14 +226,14 @@ Spot pairs use dashed canonical symbols (e.g. `HYPE-USDC`, `PURR-USDC`); the ser
 |------|-------------|
 | `get_spot_pairs` | List all 294 spot pairs with metadata (base/quote, wire symbol, decimals, latest price) |
 | `get_spot_pair` | Get a single spot pair by dashed symbol (e.g. `HYPE-USDC`) |
-| `get_spot_orderbook` | Current spot L2 orderbook (live from 2026-05-05; Pro+ for full depth) |
-| `get_spot_orderbook_history` | Historical spot L2 orderbook snapshots (live-only from 2026-05-05; Build+) |
+| `get_spot_orderbook` | Current spot L2 orderbook (live from 2026-05-05; full depth on every tier) |
+| `get_spot_orderbook_history` | Historical spot L2 orderbook snapshots (live-only from 2026-05-05) |
 | `get_spot_trades` | Spot trade history with optional user filter (S3 backfill from 2025-03-22) |
 | `get_spot_trades_recent` | Most recent spot trades (live from 2026-05-05) |
-| `get_spot_order_history` | Spot order lifecycle events with user attribution (Pro+ tier) |
-| `get_spot_l4_orderbook` | Spot L4 orderbook reconstruction at a specific timestamp (Pro+ tier) |
-| `get_spot_l4_diffs` | Spot raw order-level changes over a time range (Pro+ tier) |
-| `get_spot_l4_orderbook_history` | Spot periodic L4 orderbook checkpoints (Build+ tier) |
+| `get_spot_order_history` | Spot order lifecycle events with user attribution |
+| `get_spot_l4_orderbook` | Spot L4 orderbook reconstruction at a specific timestamp |
+| `get_spot_l4_diffs` | Spot raw order-level changes over a time range |
+| `get_spot_l4_orderbook_history` | Spot periodic L4 orderbook checkpoints |
 | `get_spot_twap_by_symbol` | Spot TWAP statuses for a single pair (live from 2026-05-05) |
 | `get_spot_twap_by_user` | Spot TWAP statuses for a single user wallet across all pairs |
 | `get_spot_freshness` | Per-pair spot data freshness and lag |
@@ -261,8 +261,8 @@ Spot pairs use dashed canonical symbols (e.g. `HYPE-USDC`, `PURR-USDC`); the ser
 
 | Tool | Description |
 |------|-------------|
-| `get_lighter_l3_orderbook` | Current L3 order-level orderbook with order IDs and user addresses (Pro+ tier) |
-| `get_lighter_l3_orderbook_history` | Historical L3 orderbook snapshots with individual orders (Pro+ tier) |
+| `get_lighter_l3_orderbook` | Current L3 order-level orderbook with order IDs and user addresses |
+| `get_lighter_l3_orderbook_history` | Historical L3 orderbook snapshots with individual orders |
 
 ### Data Quality
 
@@ -287,10 +287,10 @@ The MCP server exposes the historical REST endpoints. For realtime, point any We
 | `liquidations`, `hip3_liquidations` | Realtime + replay liquidations. Each event is a fill row with `is_liquidation: true` (same shape as `trades`). |
 | `orderbook`, `hip3_orderbook`, `hip4_orderbook`, `lighter_orderbook` | Realtime + replay L2 orderbook updates (~1.2 sec resolution) |
 | `hip4_open_interest` | Realtime + replay HIP-4 per-side open interest snapshots |
-| `hip4_l4_diffs`, `hip4_l4_orders`, `l4_diffs`, `l4_orders`, `hip3_l4_diffs`, `hip3_l4_orders` | Order-level events (Pro+, realtime only, no replay) |
+| `hip4_l4_diffs`, `hip4_l4_orders`, `l4_diffs`, `l4_orders`, `hip3_l4_diffs`, `hip3_l4_orders` | Order-level events (realtime only, no replay) |
 | `outcome_settled` | HIP-4 outcome resolution event. Fired once per outcome when `is_settled` flips to true. |
 
-Build+ tier required for any WebSocket access; Pro+ for L4 channels.
+WebSocket access (including all L4 channels) is available on every tier, starting with Free (10 subscriptions / 2 connections / 10x replay).
 
 ### Web3 Authentication
 
@@ -308,14 +308,15 @@ Build+ tier required for any WebSocket access; Pro+ for L4 channels.
 
 ## Pricing Tiers
 
-Some endpoints require a paid plan. The server returns clear error messages with upgrade guidance when tier limits are hit.
+Every tier gets the full open catalog: all markets (HL perps, HIP-3, HIP-4, Spot, Lighter), all schemas (L2 full depth, L4 diffs/reconstruction/checkpoints, L3, trades, candles, funding, OI, liquidations, order history/flow/TP-SL), all Lighter granularities (including tick), and full history back to April 2023. Nothing is symbol-, depth-, datatype-, or history-gated. Tiers differ only on monthly credits, RPS, concurrent queries, WebSocket scale, replay speed, export credits, and support/SLA.
 
-| Tier | Price | Access |
-|------|-------|--------|
-| Free | $0/mo | BTC-only historical data |
-| Build | $49/mo | All coins, REST API, 25 WS subs |
-| Pro | $199/mo | Full orderbook depth, 100 WS subs |
-| Enterprise | Custom | Tick data, 200 WS subs |
+| Tier | Price | Credits/mo | RPS | Concurrency | WebSocket | Replay | Export | Notes |
+|------|-------|-----------|-----|-------------|-----------|--------|--------|-------|
+| Free | $0/mo | 50,000 | 15 | 3 | 10 subs (2 conn) | 10x | $0 | All markets, full history |
+| Build | $49/mo ($39 annual) | 80M | 50 | 10 | 500 subs (3 conn) | 50x | $50 | All markets, full history |
+| Pro | $199/mo ($159 annual) | 400M | 150 | 20 | 3,000 subs (5 conn) | 100x | $300 | All markets, full history |
+| Scale | $799/mo ($639 annual) | 2B | 500 | 20 | 20,000 subs (16 conn) | 300x | $1,500 | 200 keys, dedicated support |
+| Enterprise | Custom | Unlimited | from 1,000 | from 500 | Custom | from 500x | Custom | SLA from 99.5%, dedicated infra |
 
 Upgrade at [0xarchive.io/pricing](https://0xarchive.io/pricing).
 
