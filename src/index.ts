@@ -31,7 +31,7 @@ const MISSING_KEY_MESSAGE =
   `   claude mcp remove 0xarchive\n` +
   `   claude mcp add 0xarchive -s user -t stdio -e OXARCHIVE_API_KEY=0xa_your_api_key -- node /path/to/build/index.js\n\n` +
   `Start a new Claude Code session after configuring.\n\n` +
-  `Free tier includes BTC historical data. Upgrade at https://0xarchive.io/pricing for all coins.`;
+  `Free tier includes all markets with full history.`;
 
 const server = new McpServer({
   name: "0xarchive",
@@ -184,10 +184,13 @@ function formatError(error: unknown): McpContent & { isError: true } {
       case 403:
         text =
           `Access denied: ${error.message}\n\n` +
-          `This endpoint may require a higher tier. Pricing:\n` +
-          `  - Build: $49/mo — REST API, 25 WS subs, 50x replay\n` +
-          `  - Pro: $199/mo — Full orderbook depth, 100 WS subs, 100x replay\n` +
-          `  - Enterprise: Custom — Tick data, 200 WS subs, 1000x replay\n\n` +
+          `All markets, schemas, and full history are available on every tier. ` +
+          `A 403 means a plan limit was hit (credits, RPS, concurrency, WebSocket cap, or export). Pricing:\n` +
+          `  - Free: $0 — 50,000 credits/mo, 15 RPS, 10 WS subs, 10x replay\n` +
+          `  - Build: $49/mo — 80M credits/mo, 50 RPS, 500 WS subs, 50x replay\n` +
+          `  - Pro: $199/mo — 400M credits/mo, 150 RPS, 3,000 WS subs, 100x replay\n` +
+          `  - Scale: $799/mo — 2B credits/mo, 500 RPS, 20,000 WS subs, 300x replay\n` +
+          `  - Enterprise: Custom — unlimited credits, RPS from 1,000, replay from 500x\n\n` +
           `Upgrade at https://0xarchive.io/pricing`;
         break;
 
@@ -213,7 +216,7 @@ function formatError(error: unknown): McpContent & { isError: true } {
         ) {
           text =
             `${error.message}\n\n` +
-            `Upgrade your plan to access more coins and features:\n` +
+            `Upgrade your plan for higher limits (credits, RPS, concurrency, WebSocket scale):\n` +
             `https://0xarchive.io/pricing`;
         } else {
           text = `API error (${error.code}): ${error.message}`;
@@ -478,7 +481,7 @@ registerCurrentTool(
 // 2. Current Orderbook
 registerOrderbookTool(
   "get_orderbook",
-  "Get the current Hyperliquid L2 orderbook snapshot for a coin. Returns bids, asks, mid price, and spread. Optionally specify depth (price levels per side). Requires Pro tier or higher for full depth.",
+  "Get the current Hyperliquid L2 orderbook snapshot for a coin. Returns bids, asks, mid price, and spread. Optionally specify depth (price levels per side). Full depth available on every tier.",
   (coin, params) => api().hyperliquid.orderbook.get(coin, params),
   CoinParam,
   normalizeHLCoin
@@ -487,7 +490,7 @@ registerOrderbookTool(
 // 3. Orderbook History
 registerHistoryTool(
   "get_orderbook_history",
-  "Get historical Hyperliquid orderbook snapshots (~1.2s resolution). Returns L2 snapshots with bids/asks over a time range. Data available from April 2023. Free: BTC only (20 levels). Build+: all symbols (200 levels). Pro+: full depth.",
+  "Get historical Hyperliquid orderbook snapshots (~1.2s resolution). Returns L2 snapshots with bids/asks over a time range. Data available from April 2023. All symbols and full depth on every tier.",
   (coin, params) =>
     api().hyperliquid.orderbook.history(coin, params as any),
   CoinParam,
@@ -652,7 +655,7 @@ registerCurrentTool(
 // 17. HIP-3 Orderbook
 registerOrderbookTool(
   "get_hip3_orderbook",
-  "Get the current HIP-3 orderbook snapshot. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns bids, asks, mid price. Free tier: km:US500 only. Build+: all HIP-3 symbols.",
+  "Get the current HIP-3 orderbook snapshot. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns bids, asks, mid price. All HIP-3 symbols on every tier.",
   (coin, params) => api().hyperliquid.hip3.orderbook.get(coin, params),
   Hip3CoinParam,
   normalizeHip3Coin
@@ -661,7 +664,7 @@ registerOrderbookTool(
 // HIP-3 Orderbook History
 registerHistoryTool(
   "get_hip3_orderbook_history",
-  "Get historical HIP-3 orderbook snapshots. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns L2 snapshots with bids/asks over a time range. Free tier: km:US500 only. Build+: all HIP-3 symbols.",
+  "Get historical HIP-3 orderbook snapshots. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns L2 snapshots with bids/asks over a time range. All HIP-3 symbols on every tier.",
   (coin, params) =>
     api().hyperliquid.hip3.orderbook.history(coin, params as any),
   Hip3CoinParam,
@@ -791,7 +794,7 @@ registerCurrentTool(
 // 24. Lighter Orderbook
 registerOrderbookTool(
   "get_lighter_orderbook",
-  "Get the current Lighter.xyz orderbook snapshot for a coin. Returns bids, asks, mid price, and spread. Optionally specify depth. Requires Pro tier for full depth.",
+  "Get the current Lighter.xyz orderbook snapshot for a coin. Returns bids, asks, mid price, and spread. Optionally specify depth. Full depth available on every tier.",
   (coin, params) => api().lighter.orderbook.get(coin, params),
   LighterCoinParam,
   normalizeLighterCoin
@@ -957,7 +960,7 @@ registerHistoryTool(
 // Lighter L3 Orderbook (current)
 registerTool(
   "get_lighter_l3_orderbook",
-  "Get Lighter L3 order-level orderbook (Pro+ tier). Returns individual orders with order IDs, user addresses, prices, and sizes.",
+  "Get Lighter L3 order-level orderbook. Returns individual orders with order IDs, user addresses, prices, and sizes.",
   {
     coin: LighterCoinParam,
     depth: DepthParam,
@@ -976,7 +979,7 @@ registerTool(
 // Lighter L3 Orderbook History
 registerHistoryTool(
   "get_lighter_l3_orderbook_history",
-  "Get historical Lighter L3 orderbook snapshots (Pro+ tier). Returns order-level snapshots with individual order IDs, user addresses, prices, and sizes over a time range.",
+  "Get historical Lighter L3 orderbook snapshots. Returns order-level snapshots with individual order IDs, user addresses, prices, and sizes over a time range.",
   (coin, params) =>
     api().lighter.l3Orderbook.history(coin, params as any),
   LighterCoinParam,
@@ -1011,7 +1014,7 @@ const TriggeredParam = z
 // Hyperliquid Order History
 registerHistoryTool(
   "get_order_history",
-  "Get Hyperliquid order history with user attribution (Build+ tier). Returns order lifecycle events including placements, fills, cancellations, and modifications with user addresses.",
+  "Get Hyperliquid order history with user attribution. Returns order lifecycle events including placements, fills, cancellations, and modifications with user addresses.",
   (coin, params) =>
     api().hyperliquid.orders.history(coin, params as any),
   CoinParam,
@@ -1026,7 +1029,7 @@ registerHistoryTool(
 // Hyperliquid Order Flow
 registerTool(
   "get_order_flow",
-  "Get Hyperliquid order flow aggregation (Build+ tier). Returns aggregated order placement, cancellation, and fill metrics over time intervals.",
+  "Get Hyperliquid order flow aggregation. Returns aggregated order placement, cancellation, and fill metrics over time intervals.",
   {
     coin: CoinParam,
     ...HistoryParams,
@@ -1054,7 +1057,7 @@ registerTool(
 // Hyperliquid TP/SL Orders
 registerHistoryTool(
   "get_tpsl",
-  "Get Hyperliquid TP/SL order history (Pro+ tier). Returns take-profit and stop-loss orders with trigger prices, user addresses, and triggered status.",
+  "Get Hyperliquid TP/SL order history. Returns take-profit and stop-loss orders with trigger prices, user addresses, and triggered status.",
   (coin, params) =>
     api().hyperliquid.orders.tpsl(coin, params as any),
   CoinParam,
@@ -1068,7 +1071,7 @@ registerHistoryTool(
 // Hyperliquid L4 Orderbook Reconstruction
 registerTool(
   "get_l4_orderbook",
-  "Get Hyperliquid L4 orderbook reconstruction (Pro+ tier). Returns full order-level orderbook at a specific timestamp with individual order IDs, user addresses, prices, and sizes.",
+  "Get Hyperliquid L4 orderbook reconstruction. Returns full order-level orderbook at a specific timestamp with individual order IDs, user addresses, prices, and sizes.",
   {
     coin: CoinParam,
     timestamp: TimestampParam.describe("Timestamp for orderbook reconstruction (Unix ms or ISO)"),
@@ -1090,7 +1093,7 @@ registerTool(
 // Hyperliquid L4 Orderbook Diffs
 registerHistoryTool(
   "get_l4_diffs",
-  "Get Hyperliquid L4 orderbook diffs (Pro+ tier). Returns raw order-level changes (new orders, modifications, cancellations, fills) over a time range.",
+  "Get Hyperliquid L4 orderbook diffs. Returns raw order-level changes (new orders, modifications, cancellations, fills) over a time range.",
   (coin, params) =>
     api().hyperliquid.l4Orderbook.diffs(coin, params as any),
   CoinParam,
@@ -1100,7 +1103,7 @@ registerHistoryTool(
 // Hyperliquid L4 Orderbook History (Checkpoints)
 registerHistoryTool(
   "get_l4_orderbook_history",
-  "Get Hyperliquid L4 orderbook checkpoints (Pro+ tier). Returns periodic full order-level orderbook snapshots over a time range for reconstruction.",
+  "Get Hyperliquid L4 orderbook checkpoints. Returns periodic full order-level orderbook snapshots over a time range for reconstruction.",
   (coin, params) =>
     api().hyperliquid.l4Orderbook.history(coin, params as any),
   CoinParam,
@@ -1114,7 +1117,7 @@ registerHistoryTool(
 // Hyperliquid L2 Orderbook Snapshot
 registerTool(
   "get_l2_orderbook",
-  "Get Hyperliquid L2 full-depth orderbook (Build+ tier). Returns aggregated price levels with total size and order count per level. Derived from L4 data. Data from March 2026+.",
+  "Get Hyperliquid L2 full-depth orderbook. Returns aggregated price levels with total size and order count per level. Derived from L4 data. Data from March 2026+.",
   {
     coin: CoinParam,
     timestamp: TimestampParam.describe("Timestamp for historical state (Unix ms or ISO). Omit for current.").optional(),
@@ -1136,7 +1139,7 @@ registerTool(
 // Hyperliquid L2 Orderbook History
 registerHistoryTool(
   "get_l2_orderbook_history",
-  "Get Hyperliquid L2 full-depth orderbook checkpoints (Build+ tier). Returns periodic aggregated orderbook snapshots over a time range.",
+  "Get Hyperliquid L2 full-depth orderbook checkpoints. Returns periodic aggregated orderbook snapshots over a time range.",
   (coin, params) =>
     api().hyperliquid.l2Orderbook.history(coin, params as any),
   CoinParam,
@@ -1147,7 +1150,7 @@ registerHistoryTool(
 // Hyperliquid L2 Orderbook Diffs
 registerHistoryTool(
   "get_l2_diffs",
-  "Get Hyperliquid L2 tick-level orderbook diffs (Pro+ tier). Returns price-level changes over a time range.",
+  "Get Hyperliquid L2 tick-level orderbook diffs. Returns price-level changes over a time range.",
   (coin, params) =>
     api().hyperliquid.l2Orderbook.diffs(coin, params as any),
   CoinParam,
@@ -1161,7 +1164,7 @@ registerHistoryTool(
 // HIP-3 Order History
 registerHistoryTool(
   "get_hip3_order_history",
-  "Get HIP-3 order history with user attribution (Build+ tier). Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns order lifecycle events with user addresses.",
+  "Get HIP-3 order history with user attribution. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns order lifecycle events with user addresses.",
   (coin, params) =>
     api().hyperliquid.hip3.orders.history(coin, params as any),
   Hip3CoinParam,
@@ -1176,7 +1179,7 @@ registerHistoryTool(
 // HIP-3 Order Flow
 registerTool(
   "get_hip3_order_flow",
-  "Get HIP-3 order flow aggregation (Build+ tier). Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns aggregated order placement, cancellation, and fill metrics.",
+  "Get HIP-3 order flow aggregation. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns aggregated order placement, cancellation, and fill metrics.",
   {
     coin: Hip3CoinParam,
     ...HistoryParams,
@@ -1204,7 +1207,7 @@ registerTool(
 // HIP-3 TP/SL Orders
 registerHistoryTool(
   "get_hip3_tpsl",
-  "Get HIP-3 TP/SL order history (Pro+ tier). Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns take-profit and stop-loss orders with trigger prices and triggered status.",
+  "Get HIP-3 TP/SL order history. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns take-profit and stop-loss orders with trigger prices and triggered status.",
   (coin, params) =>
     api().hyperliquid.hip3.orders.tpsl(coin, params as any),
   Hip3CoinParam,
@@ -1218,7 +1221,7 @@ registerHistoryTool(
 // HIP-3 L4 Orderbook Reconstruction
 registerTool(
   "get_hip3_l4_orderbook",
-  "Get HIP-3 L4 orderbook reconstruction (Pro+ tier). Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns full order-level orderbook at a specific timestamp.",
+  "Get HIP-3 L4 orderbook reconstruction. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns full order-level orderbook at a specific timestamp.",
   {
     coin: Hip3CoinParam,
     timestamp: TimestampParam.describe("Timestamp for orderbook reconstruction (Unix ms or ISO)"),
@@ -1240,7 +1243,7 @@ registerTool(
 // HIP-3 L4 Orderbook Diffs
 registerHistoryTool(
   "get_hip3_l4_diffs",
-  "Get HIP-3 L4 orderbook diffs (Pro+ tier). Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns raw order-level changes over a time range.",
+  "Get HIP-3 L4 orderbook diffs. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns raw order-level changes over a time range.",
   (coin, params) =>
     api().hyperliquid.hip3.l4Orderbook.diffs(coin, params as any),
   Hip3CoinParam,
@@ -1250,7 +1253,7 @@ registerHistoryTool(
 // HIP-3 L4 Orderbook History (Checkpoints)
 registerHistoryTool(
   "get_hip3_l4_orderbook_history",
-  "Get HIP-3 L4 orderbook checkpoints (Pro+ tier). Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns periodic full order-level orderbook snapshots.",
+  "Get HIP-3 L4 orderbook checkpoints. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns periodic full order-level orderbook snapshots.",
   (coin, params) =>
     api().hyperliquid.hip3.l4Orderbook.history(coin, params as any),
   Hip3CoinParam,
@@ -1264,7 +1267,7 @@ registerHistoryTool(
 // HIP-3 L2 Orderbook Snapshot
 registerTool(
   "get_hip3_l2_orderbook",
-  "Get HIP-3 L2 full-depth orderbook (Build+ tier). Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns aggregated price levels. Derived from L4 data.",
+  "Get HIP-3 L2 full-depth orderbook. Symbols are CASE-SENSITIVE (e.g. 'km:US500'). Returns aggregated price levels. Derived from L4 data.",
   {
     coin: Hip3CoinParam,
     timestamp: TimestampParam.describe("Timestamp for historical state (Unix ms or ISO). Omit for current.").optional(),
@@ -1286,7 +1289,7 @@ registerTool(
 // HIP-3 L2 Orderbook History
 registerHistoryTool(
   "get_hip3_l2_orderbook_history",
-  "Get HIP-3 L2 full-depth orderbook checkpoints (Build+ tier). Symbols are CASE-SENSITIVE. Returns periodic aggregated snapshots.",
+  "Get HIP-3 L2 full-depth orderbook checkpoints. Symbols are CASE-SENSITIVE. Returns periodic aggregated snapshots.",
   (coin, params) =>
     api().hyperliquid.hip3.l2Orderbook.history(coin, params as any),
   Hip3CoinParam,
@@ -1297,7 +1300,7 @@ registerHistoryTool(
 // HIP-3 L2 Diffs
 registerHistoryTool(
   "get_hip3_l2_diffs",
-  "Get HIP-3 L2 tick-level orderbook diffs (Pro+ tier). Symbols are CASE-SENSITIVE. Returns price-level changes.",
+  "Get HIP-3 L2 tick-level orderbook diffs. Symbols are CASE-SENSITIVE. Returns price-level changes.",
   (coin, params) =>
     api().hyperliquid.hip3.l2Orderbook.diffs(coin, params as any),
   Hip3CoinParam,
@@ -1331,7 +1334,7 @@ registerCurrentTool(
 // Spot Orderbook (current)
 registerOrderbookTool(
   "get_spot_orderbook",
-  "Get the current Hyperliquid Spot L2 orderbook snapshot for a pair. Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns bids, asks, mid price, and spread. Optionally specify depth (price levels per side). Live from 2026-05-05. Pro+ tier required for full depth.",
+  "Get the current Hyperliquid Spot L2 orderbook snapshot for a pair. Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns bids, asks, mid price, and spread. Optionally specify depth (price levels per side). Live from 2026-05-05. Full depth available on every tier.",
   (coin, params) => api().spot.orderbook.get(coin, params),
   SpotCoinParam,
   normalizeSpotCoin
@@ -1340,7 +1343,7 @@ registerOrderbookTool(
 // Spot Orderbook History
 registerHistoryTool(
   "get_spot_orderbook_history",
-  "Get historical Hyperliquid Spot L2 orderbook snapshots over a time range. Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns L2 snapshots with bids/asks. Live coverage from 2026-05-05 (no historical backfill before that date because Hyperliquid does not publish historical spot orderbook data). Build+ tier required for non-default depth.",
+  "Get historical Hyperliquid Spot L2 orderbook snapshots over a time range. Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns L2 snapshots with bids/asks. Live coverage from 2026-05-05 (no historical backfill before that date because Hyperliquid does not publish historical spot orderbook data). Full depth available on every tier.",
   (coin, params) =>
     api().spot.orderbook.history(coin, params as any),
   SpotCoinParam,
@@ -1377,10 +1380,10 @@ registerTool(
   }
 );
 
-// Spot Order History (Pro+)
+// Spot Order History
 registerHistoryTool(
   "get_spot_order_history",
-  "Get Hyperliquid Spot order lifecycle events with user attribution (Pro+ tier). Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns placements, fills, cancellations, and modifications with user addresses. Live from 2026-05-05.",
+  "Get Hyperliquid Spot order lifecycle events with user attribution. Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns placements, fills, cancellations, and modifications with user addresses. Live from 2026-05-05.",
   (coin, params) =>
     api().spot.orders.history(coin, params as any),
   SpotCoinParam,
@@ -1392,10 +1395,10 @@ registerHistoryTool(
   }
 );
 
-// Spot L4 Orderbook (current reconstruction, Pro+)
+// Spot L4 Orderbook (current reconstruction)
 registerTool(
   "get_spot_l4_orderbook",
-  "Get Hyperliquid Spot L4 orderbook reconstruction at a specific timestamp (Pro+ tier). Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns the full order-level orderbook with individual order IDs, user addresses, prices, and sizes. Live from 2026-05-05.",
+  "Get Hyperliquid Spot L4 orderbook reconstruction at a specific timestamp. Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns the full order-level orderbook with individual order IDs, user addresses, prices, and sizes. Live from 2026-05-05.",
   {
     coin: SpotCoinParam,
     timestamp: TimestampParam.describe("Timestamp for orderbook reconstruction (Unix ms or ISO)"),
@@ -1414,20 +1417,20 @@ registerTool(
   }
 );
 
-// Spot L4 Orderbook Diffs (Pro+)
+// Spot L4 Orderbook Diffs
 registerHistoryTool(
   "get_spot_l4_diffs",
-  "Get Hyperliquid Spot L4 orderbook diffs (Pro+ tier). Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns raw order-level changes (new orders, modifications, cancellations, fills) over a time range. Live from 2026-05-05.",
+  "Get Hyperliquid Spot L4 orderbook diffs. Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns raw order-level changes (new orders, modifications, cancellations, fills) over a time range. Live from 2026-05-05.",
   (coin, params) =>
     api().spot.l4Orderbook.diffs(coin, params as any),
   SpotCoinParam,
   normalizeSpotCoin
 );
 
-// Spot L4 Orderbook History / Checkpoints (Build+)
+// Spot L4 Orderbook History / Checkpoints
 registerHistoryTool(
   "get_spot_l4_orderbook_history",
-  "Get Hyperliquid Spot L4 orderbook checkpoints (Build+ tier). Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns periodic full order-level orderbook snapshots over a time range for reconstruction. Live from 2026-05-05.",
+  "Get Hyperliquid Spot L4 orderbook checkpoints. Symbols are dashed canonical (e.g. 'HYPE-USDC'). Returns periodic full order-level orderbook snapshots over a time range for reconstruction. Live from 2026-05-05.",
   (coin, params) =>
     api().spot.l4Orderbook.history(coin, params as any),
   SpotCoinParam,
@@ -1620,7 +1623,7 @@ registerTool(
 // HIP-4 Orderbook (current)
 registerTool(
   "get_hip4_orderbook",
-  "Get the current HIP-4 L2 orderbook snapshot for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns bids and asks. Note: mark_price for HIP-4 is an implied probability (0..1), not a USD price. Pro+ tier required.",
+  "Get the current HIP-4 L2 orderbook snapshot for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns bids and asks. Note: mark_price for HIP-4 is an implied probability (0..1), not a USD price.",
   {
     coin: Hip4CoinParam,
     depth: DepthParam,
@@ -1637,7 +1640,7 @@ registerTool(
 // HIP-4 Orderbook History
 registerTool(
   "get_hip4_orderbook_history",
-  "Get historical HIP-4 L2 orderbook snapshots for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns L2 snapshots over a time range. Pro+ tier required.",
+  "Get historical HIP-4 L2 orderbook snapshots for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns L2 snapshots over a time range.",
   {
     coin: Hip4CoinParam,
     ...HistoryParams,
@@ -1777,7 +1780,7 @@ registerTool(
 // HIP-4 Order History
 registerTool(
   "get_hip4_order_history",
-  "Get HIP-4 order lifecycle events with user attribution (Pro+ tier) for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns placements, fills, cancellations, modifications.",
+  "Get HIP-4 order lifecycle events with user attribution for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns placements, fills, cancellations, modifications.",
   {
     coin: Hip4CoinParam,
     ...HistoryParams,
@@ -1803,7 +1806,7 @@ registerTool(
 // HIP-4 Order Flow
 registerTool(
   "get_hip4_order_flow",
-  "Get HIP-4 order flow aggregation (Pro+ tier) for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns time-bucketed order placement, cancellation, and fill metrics.",
+  "Get HIP-4 order flow aggregation for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns time-bucketed order placement, cancellation, and fill metrics.",
   {
     coin: Hip4CoinParam,
     ...HistoryParams,
@@ -1828,7 +1831,7 @@ registerTool(
 // HIP-4 TP/SL
 registerTool(
   "get_hip4_tpsl",
-  "Get HIP-4 TP/SL order history (Pro+ tier) for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns take-profit and stop-loss orders with trigger prices and triggered status.",
+  "Get HIP-4 TP/SL order history for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns take-profit and stop-loss orders with trigger prices and triggered status.",
   {
     coin: Hip4CoinParam,
     ...HistoryParams,
@@ -1852,7 +1855,7 @@ registerTool(
 // HIP-4 L4 Orderbook (current reconstruction)
 registerTool(
   "get_hip4_l4_orderbook",
-  "Get HIP-4 L4 orderbook reconstruction (Pro+ tier) for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns the full order-level orderbook at a specific timestamp with individual order IDs, user addresses, prices, and sizes.",
+  "Get HIP-4 L4 orderbook reconstruction for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns the full order-level orderbook at a specific timestamp with individual order IDs, user addresses, prices, and sizes.",
   {
     coin: Hip4CoinParam,
     timestamp: TimestampParam.describe("Timestamp for orderbook reconstruction (Unix ms or ISO)"),
@@ -1874,7 +1877,7 @@ registerTool(
 // HIP-4 L4 Diffs
 registerTool(
   "get_hip4_l4_diffs",
-  "Get HIP-4 L4 orderbook diffs (Pro+ tier) for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns raw order-level changes (new orders, modifications, cancellations, fills) over a time range.",
+  "Get HIP-4 L4 orderbook diffs for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns raw order-level changes (new orders, modifications, cancellations, fills) over a time range.",
   {
     coin: Hip4CoinParam,
     ...HistoryParams,
@@ -1893,7 +1896,7 @@ registerTool(
 // HIP-4 L4 Orderbook History (Checkpoints)
 registerTool(
   "get_hip4_l4_orderbook_history",
-  "Get HIP-4 L4 orderbook checkpoints (Build+ tier) for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns periodic full order-level snapshots. Hard cap limit=10 per request.",
+  "Get HIP-4 L4 orderbook checkpoints for a coin (e.g. '0'). Bare numeric coins are canonical; legacy '#0' / '%230' forms are also accepted.Returns periodic full order-level snapshots. Hard cap limit=10 per request.",
   {
     coin: Hip4CoinParam,
     ...HistoryParams,
