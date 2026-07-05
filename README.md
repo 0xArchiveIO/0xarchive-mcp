@@ -8,7 +8,7 @@ Typed 0xArchive market data tools for MCP-capable clients.
 
 > **Recommended:** Use the hosted MCP at <https://mcp.0xarchive.io> for most setups (zero install, OAuth, always current). This repository is the self-hosted package. Reach for it when you need stdio transport (Claude Desktop, certain IDE plugins), run in an air-gapped environment, or have compliance requirements that prevent a hosted intermediary.
 
-0xArchive is granular market data infrastructure for Hyperliquid and Lighter.xyz. Hyperliquid includes core perps, HIP-3 builder perps, HIP-4 outcome markets, and Hyperliquid Spot; Lighter.xyz is the second top-level venue API. This server exposes 111 typed tools for order books, trades, candles, funding, open interest, liquidations, L4/L3 order-level data, outcome markets, spot pairs, TWAP statuses, data quality, and wallet-managed auth.
+0xArchive is granular market data infrastructure for Hyperliquid and Lighter.xyz. Hyperliquid includes core perps, HIP-3 builder perps, HIP-4 outcome markets, and Hyperliquid Spot; Lighter.xyz is the second top-level venue API. This server exposes 111 typed tools for order books, trades, candles, funding, open interest, liquidations, L4 order-level depth on Hyperliquid, L3 order-level depth on Lighter, outcome markets, spot pairs, TWAP statuses, data quality, and wallet-managed auth.
 
 Use MCP when you want typed tools or shared client config across any client that supports MCP, including Claude Code, Claude Desktop, Cursor, ChatGPT Codex setups with MCP enabled, and other agent clients. Claude Code and ChatGPT Codex are equal first-class coding-agent paths: use this server wherever MCP is available, and use the same API key with the CLI, SDKs, skills, `llms.txt`, OpenAPI, and markdown docs wherever shell, repo, or file context is the better route.
 
@@ -308,7 +308,7 @@ WebSocket access (including all L4 channels) is available on every tier, startin
 
 ## Pricing Tiers
 
-Every tier gets the full open catalog: all markets (HL perps, HIP-3, HIP-4, Spot, Lighter), all schemas (L2 full depth, L4 diffs/reconstruction/checkpoints, L3, trades, candles, funding, OI, liquidations, order history/flow/TP-SL), all Lighter granularities (including tick), and full history back to April 2023. Nothing is symbol-, depth-, datatype-, or history-gated. Tiers differ only on monthly credits, RPS, concurrent queries, WebSocket scale, replay speed, export credits, and support/SLA.
+Every tier gets the full open catalog: all markets (HL perps, HIP-3, HIP-4, Spot, Lighter), all schemas (L2 full depth, L4 diffs/reconstruction/checkpoints, L3, trades, candles, funding, OI, liquidations, order history/flow/TP-SL), and all Lighter granularities (including tick). Hyperliquid history goes back to April 2023; Lighter history is per-datatype, with trades from January 2025. Nothing is symbol-, depth-, datatype-, or history-gated. Tiers differ only on monthly credits, RPS, concurrent queries, WebSocket scale, replay speed, export credits, and support/SLA.
 
 | Tier | Price | Credits/mo | RPS | Concurrency | WebSocket | Replay | Export | Notes |
 |------|-------|-----------|-----|-------------|-----------|--------|--------|-------|
