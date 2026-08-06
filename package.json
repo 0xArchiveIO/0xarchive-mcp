@@ -1,6 +1,6 @@
 {
   "name": "@0xarchive/mcp-server",
-  "version": "1.9.0",
+  "version": "1.9.2",
   "description": "MCP server that gives coding agents typed 0xArchive market data tools across Hyperliquid (perps, HIP-3, HIP-4, spot) and Lighter.xyz",
   "type": "module",
   "bin": {
