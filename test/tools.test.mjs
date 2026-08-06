@@ -3,11 +3,18 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
+import { readFileSync } from "node:fs";
+
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const serverEntry = path.resolve(here, "..", "build", "index.js");
+
+// Derive from package.json so the assertion cannot drift from the shipped version.
+const { version: PACKAGE_VERSION } = JSON.parse(
+  readFileSync(path.resolve(here, "..", "package.json"), "utf8"),
+);
 
 async function withClient(fn) {
   const transport = new StdioClientTransport({
@@ -24,14 +31,21 @@ async function withClient(fn) {
   }
 }
 
-test("MCP server lists 111 tools at version 1.9.0", async () => {
+// 110 since 1.9.3: web3_signup was removed when free wallet signup was retired.
+test("MCP server lists 110 tools at the package version", async () => {
   await withClient(async (client) => {
     const info = client.getServerVersion();
     assert.equal(info?.name, "0xarchive");
-    assert.equal(info?.version, "1.9.0");
+    assert.equal(info?.version, PACKAGE_VERSION);
 
     const { tools } = await client.listTools();
-    assert.equal(tools.length, 111, `expected 111 tools, got ${tools.length}`);
+    assert.equal(tools.length, 110, `expected 110 tools, got ${tools.length}`);
+
+    const names = tools.map((tool) => tool.name);
+    assert.ok(!names.includes("web3_signup"), "web3_signup must not be registered");
+    for (const kept of ["web3_challenge", "web3_list_keys", "web3_revoke_key", "web3_subscribe"]) {
+      assert.ok(names.includes(kept), `${kept} must still be registered`);
+    }
   });
 });
 
