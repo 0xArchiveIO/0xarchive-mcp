@@ -22,12 +22,14 @@ function api(): OxArchive {
 }
 
 const MISSING_KEY_MESSAGE =
-  `API key not configured. To use 0xArchive tools:\n\n` +
-  `Option A — Browser signup:\n` +
-  `1. Sign up at https://0xarchive.io and go to Dashboard to create an API key\n\n` +
-  `Option B — Wallet signup (no browser needed):\n` +
-  `1. Use the web3_challenge and web3_signup tools to get a free API key with your Ethereum wallet\n\n` +
-  `Then reconfigure the MCP server with your key:\n\n` +
+  `API key not configured.\n\n` +
+  `This self-hosted package is retired. The hosted MCP needs no install and no API key:\n\n` +
+  `   claude mcp remove 0xarchive\n` +
+  `   claude mcp add --transport http 0xarchive https://mcp.0xarchive.io/mcp\n\n` +
+  `Setup guide: https://docs.0xarchive.io/mcp-server\n\n` +
+  `To keep using this package instead:\n\n` +
+  `1. Sign up at https://0xarchive.io and create an API key from the Dashboard\n` +
+  `2. Reconfigure this server with it:\n\n` +
   `   claude mcp remove 0xarchive\n` +
   `   claude mcp add 0xarchive -s user -t stdio -e OXARCHIVE_API_KEY=0xa_your_api_key -- node /path/to/build/index.js\n\n` +
   `Start a new Claude Code session after configuring.\n\n` +
@@ -35,7 +37,7 @@ const MISSING_KEY_MESSAGE =
 
 const server = new McpServer({
   name: "0xarchive",
-  version: "1.9.0",
+  version: "1.9.3",
 });
 
 // All tools are read-only, idempotent API queries to an external service
@@ -1500,7 +1502,7 @@ async function hip4Request(
   }
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "User-Agent": "0xarchive-mcp/1.9.0",
+    "User-Agent": "0xarchive-mcp/1.9.3",
   };
   if (apiKey) headers["X-API-Key"] = apiKey;
 
@@ -2078,8 +2080,10 @@ server.registerTool(
   {
     description:
       "Get a SIWE (Sign-In with Ethereum) challenge message for a wallet address. " +
-      "This is the first step to create a free API key using only a wallet — no browser or email required. " +
-      "The returned message must be signed with personal_sign (EIP-191), then submitted to web3_signup.",
+      "Required first step for web3_list_keys, web3_revoke_key, and web3_subscribe: the returned " +
+      "message must be signed with personal_sign (EIP-191). " +
+      "This does not create an account. Free wallet signup has been retired; sign up at " +
+      "https://0xarchive.io for a free key, or use web3_subscribe for paid wallet access.",
     inputSchema: {
       address: z.string().describe("Ethereum wallet address (e.g., '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18')"),
     },
@@ -2114,46 +2118,10 @@ server.registerTool(
   }
 );
 
-// Web3 signup — works even without API key
-server.registerTool(
-  "web3_signup",
-  {
-    description:
-      "Create a free-tier 0xArchive account and get an API key using a signed SIWE message. " +
-      "Requires a challenge from web3_challenge signed with personal_sign (EIP-191). " +
-      "Returns an API key that can be used with all other tools.",
-    inputSchema: {
-      message: z.string().describe("The SIWE message from web3_challenge"),
-      signature: z.string().describe("Hex-encoded signature from personal_sign (0x-prefixed, 65 bytes)"),
-    },
-    outputSchema: ObjectOutputSchema,
-    annotations: AUTH_TOOL_ANNOTATIONS,
-  },
-  async (params: any) => {
-    try {
-      if (client) {
-        const data = await api().web3.signup(params.message, params.signature);
-        return formatResponse(data);
-      }
-      const response = await fetch("https://api.0xarchive.io/v1/web3/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: params.message, signature: params.signature }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        return {
-          content: [{ type: "text" as const, text: `Error: ${data.error || "Signup failed"}` }],
-          isError: true,
-        };
-      }
-      return formatResponse(data);
-    } catch (err) {
-      const error = err instanceof OxArchiveError ? err : new OxArchiveError(String(err), 500);
-      return formatError(error);
-    }
-  }
-);
+// web3_signup was removed in 1.9.3. Free wallet signup was retired server-side on
+// 2026-07-21 and POST /v1/web3/signup now returns 410, so the tool could only ever
+// fail. web3_challenge, web3_list_keys, web3_revoke_key and web3_subscribe all still
+// work and are unchanged.
 
 // Web3 list keys — works even without API key
 server.registerTool(
