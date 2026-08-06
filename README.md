@@ -1,16 +1,32 @@
-# 0xArchive MCP Server
+# 0xArchive MCP Server (retired)
 
-<a href="https://glama.ai/mcp/servers/@0xArchiveIO/0xarchive-mcp">
-  <img width="380" height="200" src="https://glama.ai/mcp/servers/@0xArchiveIO/0xarchive-mcp/badge" />
-</a>
+> **This package is retired. Use the hosted MCP instead: <https://docs.0xarchive.io/mcp-server>**
+>
+> The hosted MCP at `https://mcp.0xarchive.io/mcp` is the supported path. It needs no install,
+> authenticates with OAuth, exposes a superset of the tools below, and stays current automatically.
+>
+> This self-hosted stdio package still installs and still works, and existing setups will keep
+> working. It is no longer developed and will not receive new tools or data sources. If you are
+> setting up 0xArchive for the first time, use the hosted MCP. If you are already running this
+> package, migration is a config change: see the migration section below.
 
-Typed 0xArchive market data tools for MCP-capable clients.
+0xArchive is granular market data infrastructure for Hyperliquid and Lighter.xyz. Hyperliquid includes core perps, HIP-3 builder perps, HIP-4 outcome markets, and Hyperliquid Spot; Lighter.xyz is the second top-level venue API.
 
-> **Recommended:** Use the hosted MCP at <https://mcp.0xarchive.io> for most setups (zero install, OAuth, always current). This repository is the self-hosted package. Reach for it when you need stdio transport (Claude Desktop, certain IDE plugins), run in an air-gapped environment, or have compliance requirements that prevent a hosted intermediary.
+## Migrate to the hosted MCP
 
-0xArchive is granular market data infrastructure for Hyperliquid and Lighter.xyz. Hyperliquid includes core perps, HIP-3 builder perps, HIP-4 outcome markets, and Hyperliquid Spot; Lighter.xyz is the second top-level venue API. This server exposes 111 typed tools for order books, trades, candles, funding, open interest, liquidations, L4 order-level depth on Hyperliquid, L3 order-level depth on Lighter, outcome markets, spot pairs, TWAP statuses, data quality, and wallet-managed auth.
+Replace the stdio server entry in your MCP client config with the remote endpoint. No package install, no API key in your environment: the hosted server uses OAuth.
 
-Use MCP when you want typed tools or shared client config across any client that supports MCP, including Claude Code, Claude Desktop, Cursor, ChatGPT Codex setups with MCP enabled, and other agent clients. Claude Code and ChatGPT Codex are equal first-class coding-agent paths: use this server wherever MCP is available, and use the same API key with the CLI, SDKs, skills, `llms.txt`, OpenAPI, and markdown docs wherever shell, repo, or file context is the better route.
+```bash
+# Claude Code
+claude mcp remove 0xarchive
+claude mcp add --transport http 0xarchive https://mcp.0xarchive.io/mcp
+```
+
+For other clients, point them at `https://mcp.0xarchive.io/mcp` as a streamable-HTTP MCP server. Full setup: <https://docs.0xarchive.io/mcp-server>
+
+---
+
+The rest of this document describes the retired self-hosted package, kept for the setups still running it.
 
 ## First Tool Result
 
@@ -351,6 +367,7 @@ For large-scale data exports (full order books, complete trade history, etc.), u
 
 ## Links
 
+- [Hosted MCP (use this)](https://docs.0xarchive.io/mcp-server)
 - [API Docs](https://www.0xarchive.io/docs)
 - [Python SDK](https://pypi.org/project/oxarchive/)
 - [TypeScript SDK](https://npmjs.com/package/@0xarchive/sdk)
