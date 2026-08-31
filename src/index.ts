@@ -33,11 +33,11 @@ const MISSING_KEY_MESSAGE =
   `   claude mcp remove 0xarchive\n` +
   `   claude mcp add 0xarchive -s user -t stdio -e OXARCHIVE_API_KEY=0xa_your_api_key -- node /path/to/build/index.js\n\n` +
   `Start a new Claude Code session after configuring.\n\n` +
-  `Free tier includes all markets with full history.`;
+  `Free tier includes all markets; history covers the most recent rolling 30 days (30-day span per request). Build and above keep the full archive.`;
 
 const server = new McpServer({
   name: "0xarchive",
-  version: "1.9.3",
+  version: "1.9.4",
 });
 
 // All tools are read-only, idempotent API queries to an external service
@@ -186,8 +186,9 @@ function formatError(error: unknown): McpContent & { isError: true } {
       case 403:
         text =
           `Access denied: ${error.message}\n\n` +
-          `All markets, schemas, and full history are available on every tier. ` +
-          `A 403 means a plan limit was hit (credits, RPS, concurrency, WebSocket cap, or export). Pricing:\n` +
+          `All markets, schemas, and full served depth are available on every tier; Free history covers ` +
+          `the most recent rolling 30 days (30-day span per request), and Build and above keep the full archive. ` +
+          `A 403 means a plan limit was hit (credits, RPS, concurrency, WebSocket cap, export, or Free's 30-day history window). Pricing:\n` +
           `  - Free: $0 — 50,000 credits/mo, 15 RPS, 10 WS subs, 10x replay\n` +
           `  - Build: $49/mo — 80M credits/mo, 50 RPS, 500 WS subs, 50x replay\n` +
           `  - Pro: $199/mo — 400M credits/mo, 150 RPS, 3,000 WS subs, 100x replay\n` +
@@ -1502,7 +1503,7 @@ async function hip4Request(
   }
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "User-Agent": "0xarchive-mcp/1.9.3",
+    "User-Agent": "0xarchive-mcp/1.9.4",
   };
   if (apiKey) headers["X-API-Key"] = apiKey;
 
