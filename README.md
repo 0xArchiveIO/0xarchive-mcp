@@ -324,11 +324,11 @@ WebSocket access (including all L4 channels) is available on every tier, startin
 
 ## Pricing Tiers
 
-Every tier gets the full open catalog: all markets (HL perps, HIP-3, HIP-4, Spot, Lighter), all schemas (L2 full depth, L4 diffs/reconstruction/checkpoints, L3, trades, candles, funding, OI, liquidations, order history/flow/TP-SL), and all Lighter granularities (including tick). Hyperliquid history goes back to April 2023; Lighter history is per-datatype, with trades from January 2025. Nothing is symbol-, depth-, datatype-, or history-gated. Tiers differ only on monthly credits, RPS, concurrent queries, WebSocket scale, replay speed, export credits, and support/SLA.
+Every tier gets the full open catalog: all markets (HL perps, HIP-3, HIP-4, Spot, Lighter), all schemas (L2 full depth, L4 diffs/reconstruction/checkpoints, L3, trades, candles, funding, OI, liquidations, order history/flow/TP-SL), and all Lighter granularities (including tick). Hyperliquid history goes back to April 2023; Lighter history is per-datatype, with trades from January 2025. Nothing is symbol-, depth-, or datatype-gated. Free's history is limited to the most recent rolling 30 days, with a maximum 30-day span per request or replay; Build and above keep the full retained archive. Plans otherwise differ on monthly credits, RPS, concurrent queries, WebSocket scale, replay speed, export credits, and support/SLA — they gate capacity and Free's 30-day history window, not route families, schemas, or served depth.
 
 | Tier | Price | Credits/mo | RPS | Concurrency | WebSocket | Replay | Export | Notes |
 |------|-------|-----------|-----|-------------|-----------|--------|--------|-------|
-| Free | $0/mo | 50,000 | 15 | 3 | 10 subs (2 conn) | 10x | $0 | All markets, full history |
+| Free | $0/mo | 50,000 | 15 | 3 | 10 subs (2 conn) | 10x | $0 | All markets; most recent rolling 30 days (30-day span); Build+ full archive |
 | Build | $49/mo ($39 annual) | 80M | 50 | 10 | 500 subs (3 conn) | 50x | $50 | All markets, full history |
 | Pro | $199/mo ($159 annual) | 400M | 150 | 20 | 3,000 subs (5 conn) | 100x | $300 | All markets, full history |
 | Scale | $799/mo ($639 annual) | 2B | 500 | 20 | 20,000 subs (16 conn) | 300x | $1,500 | 200 keys, dedicated support |
