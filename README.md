@@ -38,5 +38,3 @@ The tools read market data; they do not place orders or change account settings.
 - [Contact 0xArchive](https://0xarchive.io/contact)
 
 Do not include access tokens, API keys, or private account information in prompts or public issues.
-
-This repository contains connection documentation. The hosted service's implementation is private.
