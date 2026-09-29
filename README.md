@@ -319,13 +319,15 @@ For custom integrations, the server publishes [OAuth resource metadata](https://
 
 ## What you can query
 
-- **Hyperliquid core perps:** market summaries, prices, trades, candles, funding, open interest, liquidations, L2 and L4 order books, order history, order flow, and trigger orders.
-- **Hyperliquid Spot:** pair discovery, trades, order books, L4 snapshots and diffs, order history, TWAP records, and freshness.
-- **HIP-3 builder perps:** market discovery and summaries, trades, candles, funding, open interest, liquidations, L2 and L4 books, orders, and market breadth. Builder-prefixed symbols such as `km:US500` identify the market.
-- **HIP-4 outcome markets:** instruments, outcomes and questions, prices, trades, open interest, order history, and L2 and L4 books.
-- **Lighter:** market discovery and summaries, trades, candles, funding, open interest, liquidations, and L2 and L3 order books.
+- **Hyperliquid core perps:** market summaries, prices, trades, candles, CVD, funding, open interest, liquidations, L2 and L4 order books, order history, order flow, trigger orders, market breadth, and wallet classification.
+- **Hyperliquid Spot:** pair discovery, trades, candles, order books, L4 snapshots and diffs, order history, TWAP records, and freshness.
+- **HIP-3 builder perps:** market discovery and summaries, trades, candles, CVD, funding, open interest, liquidations, L2 and L4 books, orders, market breadth, oracle external prices and discovery bounds, and wallet classification. Builder-prefixed symbols such as `km:US500` identify the market.
+- **HIP-4 outcome markets:** instruments, outcomes and questions, prices, candles, trades, open interest, order history, and L2 and L4 books.
+- **Lighter (mainnet and Robinhood Chain):** market discovery and summaries, trades, candles, funding, open interest, liquidations, and order books; L3 order books on mainnet.
+- **Account positions:** current and historical positions, position changes, and account summaries by Hyperliquid wallet or Lighter account index, plus per-market position listings.
+- **Webhooks:** endpoints, subscriptions, estimate and dry-run previews, watched wallets, and the delivery log, when your client connects with webhook access.
 
-Hyperliquid core and HIP-3 also expose projected forced-liquidation price levels and trigger-price levels. Data-quality tools provide coverage, freshness, incident, latency, and status information.
+Hyperliquid core and HIP-3 also expose projected forced-liquidation price levels and trigger-price levels. Data-quality tools provide coverage, freshness (including account positions), incident, latency, and status information.
 
 Examples include `get_summary`, `get_hip3_instruments`, `get_spot_pairs`, `get_hip4_outcomes`, `get_lighter_l3_orderbook`, and `get_symbol_coverage`. Your client discovers the available tools and their input schemas when it connects.
 
