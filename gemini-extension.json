@@ -1,0 +1,11 @@
+{
+  "name": "0xarchive",
+  "version": "1.0.0",
+  "description": "Hyperliquid and Lighter market data through 0xArchive's hosted MCP server.",
+  "mcpServers": {
+    "0xarchive": {
+      "httpUrl": "https://mcp.0xarchive.io/mcp",
+      "trust": false
+    }
+  }
+}
