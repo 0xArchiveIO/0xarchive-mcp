@@ -5,7 +5,14 @@
   "mcpServers": {
     "0xarchive": {
       "httpUrl": "https://mcp.0xarchive.io/mcp",
-      "trust": false
+      "oauth": {
+        "enabled": true,
+        "scopes": [
+          "mcp:market.read",
+          "mcp:webhooks.read",
+          "mcp:webhooks.write"
+        ]
+      }
     }
   }
 }
