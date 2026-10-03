@@ -1,0 +1,18 @@
+{
+  "name": "0xarchive",
+  "displayName": "0xArchive",
+  "version": "1.0.0",
+  "description": "Hyperliquid and Lighter market data through 0xArchive's hosted MCP server.",
+  "author": {
+    "name": "0xArchive"
+  },
+  "homepage": "https://0xarchive.io",
+  "repository": "https://github.com/0xArchiveIO/0xarchive-mcp",
+  "license": "MIT",
+  "keywords": ["mcp", "market-data", "hyperliquid", "lighter"],
+  "mcpServers": {
+    "0xarchive": {
+      "url": "https://mcp.0xarchive.io/mcp"
+    }
+  }
+}
