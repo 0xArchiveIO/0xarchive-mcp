@@ -1,0 +1,31 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.0xarchive/mcp",
+  "title": "0xArchive Market Data",
+  "description": "Hyperliquid and Lighter market data: order books, trades, candles, funding, OI, and webhooks",
+  "version": "1.5.0",
+  "websiteUrl": "https://docs.0xarchive.io/mcp-server",
+  "repository": {
+    "url": "https://github.com/0xArchiveIO/0xarchive-mcp",
+    "source": "github",
+    "id": "1162931370"
+  },
+  "icons": [
+    {
+      "src": "https://0xarchive.io/favicon.svg",
+      "mimeType": "image/svg+xml",
+      "sizes": ["any"]
+    },
+    {
+      "src": "https://0xarchive.io/logo.png",
+      "mimeType": "image/png",
+      "sizes": ["1024x1024"]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.0xarchive.io/mcp"
+    }
+  ]
+}
