@@ -1,6 +1,6 @@
 # 0xArchive MCP
 
-Query Hyperliquid and Lighter market data from your agent. Get current and historical order books, trades, candles, funding, open interest, and data coverage through read-only MCP tools.
+Query Hyperliquid and Lighter market data from your agent. Get current and historical order books, trades, candles, funding, open interest, and data coverage through read-only market-data tools, and manage webhooks when you grant webhook access.
 
 [Connect](#connect) · [Agents and clients](#agents-and-clients) · [Data](#what-you-can-query) · [Examples](#example-requests) · [Troubleshooting](#troubleshooting)
 
@@ -12,7 +12,7 @@ Query Hyperliquid and Lighter market data from your agent. Get current and histo
 https://mcp.0xarchive.io/mcp
 ```
 
-Add the URL as a remote HTTP MCP server, then sign in with your 0xArchive account through the client's OAuth flow. Approve the `mcp:market.read` permission when prompted. No 0xArchive API key or local MCP server installation is required.
+Add the URL as a remote HTTP MCP server, then sign in with your 0xArchive account through the client's OAuth flow. Approve the `mcp:market.read` permission when prompted; approve `mcp:webhooks.read` and `mcp:webhooks.write` as well if you want the webhook tools. No 0xArchive API key or local MCP server installation is required.
 
 Start with:
 
@@ -321,7 +321,7 @@ For custom integrations, the server publishes [OAuth resource metadata](https://
 
 - **Hyperliquid core perps:** market summaries, prices, trades, candles, CVD, funding, open interest, liquidations, L2 and L4 order books, order history, order flow, trigger orders, market breadth, and wallet classification.
 - **Hyperliquid Spot:** pair discovery, trades, candles, order books, L4 snapshots and diffs, order history, TWAP records, and freshness.
-- **HIP-3 builder perps:** market discovery and summaries, trades, candles, CVD, funding, open interest, liquidations, L2 and L4 books, orders, market breadth, oracle external prices and discovery bounds, and wallet classification. Builder-prefixed symbols such as `km:US500` identify the market.
+- **HIP-3 builder perps:** market discovery and summaries, trades, candles, CVD, funding, open interest, liquidations, L2 and L4 books, orders, market breadth, oracle external prices and discovery bounds, and wallet classification. Builder-prefixed symbols such as `xyz:SP500` identify the market.
 - **HIP-4 outcome markets:** instruments, outcomes and questions, prices, candles, trades, open interest, order history, and L2 and L4 books.
 - **Lighter (mainnet and Robinhood Chain):** market discovery and summaries, trades, candles, funding, open interest, liquidations, and order books; L3 order books on mainnet.
 - **Account positions:** current and historical positions, position changes, and account summaries by Hyperliquid wallet or Lighter account index, plus per-market position listings.
@@ -345,7 +345,7 @@ Examples include `get_summary`, `get_hip3_instruments`, `get_spot_pairs`, `get_h
 > Fetch ETH one-hour Hyperliquid candles for the last 24 hours. Summarize the price range and trading volume.
 
 **Builder markets**
-> Find the HIP-3 market `km:US500` and get its current summary and order book.
+> Find the HIP-3 market `xyz:SP500` and get its current summary and order book.
 
 **Spot markets**
 > Find Hyperliquid Spot pairs for HYPE, then fetch recent trades for the matching pair.
