@@ -295,18 +295,21 @@ Spot pairs use dashed canonical symbols (e.g. `HYPE-USDC`, `PURR-USDC`); the ser
 
 ### Realtime WebSocket Channels
 
-The MCP server exposes the historical REST endpoints. For realtime, point any WebSocket client at `wss://api.0xarchive.io/ws?apiKey=...` and subscribe to:
+The MCP server exposes the historical REST endpoints and does not stream. For realtime, point any WebSocket client at `wss://api.0xarchive.io/ws?apiKey=...` for every channel below except `mempool`, which is served only at `wss://stream.0xarchive.io/ws?apiKey=...`. Both endpoints take the same API key.
 
 | Channel | Notes |
 |---------|-------|
 | `trades`, `hip3_trades`, `hip4_trades`, `lighter_trades` | Realtime + replay fills (one row per side per trade) |
 | `liquidations`, `hip3_liquidations` | Realtime + replay liquidations. Each event is a fill row with `is_liquidation: true` (same shape as `trades`). |
-| `orderbook`, `hip3_orderbook`, `hip4_orderbook`, `lighter_orderbook` | Realtime + replay L2 orderbook updates (~1.2 sec resolution) |
-| `hip4_open_interest` | Realtime + replay HIP-4 per-side open interest snapshots |
-| `hip4_l4_diffs`, `hip4_l4_orders`, `l4_diffs`, `l4_orders`, `hip3_l4_diffs`, `hip3_l4_orders` | Order-level events (realtime only, no replay) |
+| `orderbook`, `hip3_orderbook`, `lighter_orderbook` | Realtime + replay L2 orderbook updates (~1.2 sec resolution) |
+| `hip4_orderbook`, `hip4_open_interest` | Replay only: HIP-4 L2 orderbook and per-side open interest snapshots |
+| `hip4_l4_diffs`, `hip4_l4_orders`, `l4_diffs`, `l4_orders`, `hip3_l4_diffs`, `hip3_l4_orders` | Order-level events (realtime + replay) |
 | `outcome_settled` | HIP-4 outcome resolution event. Fired once per outcome when `is_settled` flips to true. |
+| `mempool` | Pending Hyperliquid transactions, before they are in a block (realtime only, no replay). Served only at `wss://stream.0xarchive.io/ws`, with the same API key, and included with the Pro, Scale and Enterprise plans. |
 
-WebSocket access (including all L4 channels) is available on every tier, starting with Free (10 subscriptions / 2 connections / 10x replay).
+`GET https://api.0xarchive.io/v1/capabilities` lists every channel, whether it streams live and whether it replays.
+
+WebSocket access (including all L4 channels) is available on every tier, starting with Free (10 subscriptions / 2 connections / 10x replay). The one exception is `mempool`, included with the Pro, Scale and Enterprise plans.
 
 ### Web3 Authentication
 
@@ -324,7 +327,7 @@ WebSocket access (including all L4 channels) is available on every tier, startin
 
 ## Pricing Tiers
 
-Every tier gets the full open catalog: all markets (HL perps, HIP-3, HIP-4, Spot, Lighter), all schemas (L2 full depth, L4 diffs/reconstruction/checkpoints, L3, trades, candles, funding, OI, liquidations, order history/flow/TP-SL), and all Lighter granularities (including tick). Hyperliquid history goes back to April 2023; Lighter history is per-datatype, with trades from January 2025. Nothing is symbol-, depth-, or datatype-gated. Free's history is limited to the most recent rolling 30 days, with a maximum 30-day span per request or replay; Build and above keep the full retained archive. Plans otherwise differ on monthly credits, RPS, concurrent queries, WebSocket scale, replay speed, export credits, and support/SLA — they gate capacity and Free's 30-day history window, not route families, schemas, or served depth.
+Every tier gets the full historical catalog: all markets (HL perps, HIP-3, HIP-4, Spot, Lighter), all schemas (L2 full depth, L4 diffs/reconstruction/checkpoints, L3, trades, candles, funding, OI, liquidations, order history/flow/TP-SL), and all Lighter granularities (including tick). Hyperliquid history goes back to April 2023; Lighter history is per-datatype, with trades from January 2025. Nothing is symbol- or depth-gated, and the only datatype not included with every plan is the live `mempool` WebSocket channel (Pro, Scale and Enterprise). Free's history is limited to the most recent rolling 30 days, with a maximum 30-day span per request or replay; Build and above keep the full retained archive. Plans otherwise differ on monthly credits, RPS, concurrent queries, WebSocket scale, replay speed, export credits, and support/SLA: they gate capacity and Free's 30-day history window, not route families, schemas, or served depth (apart from `mempool`).
 
 | Tier | Price | Credits/mo | RPS | Concurrency | WebSocket | Replay | Export | Notes |
 |------|-------|-----------|-----|-------------|-----------|--------|--------|-------|
