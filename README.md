@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/0xArchiveIO/0xarchive-mcp/HEAD/assets/readme/hero-dark.png">
-  <img alt="0xArchive MCP: ask your agent about the market, with no key and no install. An agent answers where BTC longs would get liquidated on Hyperliquid using the get_liquidation_levels tool." src="https://raw.githubusercontent.com/0xArchiveIO/0xarchive-mcp/HEAD/assets/readme/hero-light.png" width="800">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/0xArchiveIO/0xarchive-mcp/HEAD/assets/readme/hero-dark.svg">
+  <img alt="0xArchive MCP: ask your agent about the market, with no key and no install. An agent answers where BTC longs would get liquidated on Hyperliquid using the get_liquidation_levels tool." src="https://raw.githubusercontent.com/0xArchiveIO/0xarchive-mcp/HEAD/assets/readme/hero-light.svg" width="800">
 </picture>
 
 <img alt="server: mcp.0xarchive.io" src="https://img.shields.io/badge/server-mcp.0xarchive.io-21C55E?style=flat-square&labelColor=3a3a37"> <img alt="auth: OAuth" src="https://img.shields.io/badge/auth-OAuth-21C55E?style=flat-square&labelColor=3a3a37"> <img alt="works with: Claude · ChatGPT · Codex · Cursor" src="https://img.shields.io/badge/works_with-Claude_·_ChatGPT_·_Codex_·_Cursor-21C55E?style=flat-square&labelColor=3a3a37"> <img alt="data: Hyperliquid · Lighter" src="https://img.shields.io/badge/data-Hyperliquid_·_Lighter-21C55E?style=flat-square&labelColor=3a3a37">
