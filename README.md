@@ -1,8 +1,26 @@
-# 0xArchive MCP
+<div align="center">
 
-Query Hyperliquid and Lighter market data from your agent. Get current and historical order books, trades, candles, funding, open interest, and data coverage through read-only market-data tools, and manage webhooks when you grant webhook access.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/0xArchiveIO/0xarchive-mcp/HEAD/assets/readme/hero-dark.png">
+  <img alt="0xArchive MCP: ask your agent about the market, with no key and no install. An agent answers where BTC longs would get liquidated on Hyperliquid using the get_liquidation_levels tool." src="https://raw.githubusercontent.com/0xArchiveIO/0xarchive-mcp/HEAD/assets/readme/hero-light.png" width="800">
+</picture>
+
+<img alt="server: mcp.0xarchive.io" src="https://img.shields.io/badge/server-mcp.0xarchive.io-21C55E?style=flat-square&labelColor=3a3a37"> <img alt="auth: OAuth" src="https://img.shields.io/badge/auth-OAuth-21C55E?style=flat-square&labelColor=3a3a37"> <img alt="works with: Claude · ChatGPT · Codex · Cursor" src="https://img.shields.io/badge/works_with-Claude_·_ChatGPT_·_Codex_·_Cursor-21C55E?style=flat-square&labelColor=3a3a37"> <img alt="data: Hyperliquid · Lighter" src="https://img.shields.io/badge/data-Hyperliquid_·_Lighter-21C55E?style=flat-square&labelColor=3a3a37">
 
 [Connect](#connect) · [Agents and clients](#agents-and-clients) · [Data](#what-you-can-query) · [Examples](#example-requests) · [Troubleshooting](#troubleshooting)
+
+</div>
+
+Query Hyperliquid and Lighter market data from your agent. Get current and historical order books, trades, candles, funding, open interest, liquidations, positions and data coverage through read-only market-data tools, and manage webhooks when you grant webhook access.
+
+<sub>The answer above came from `get_liquidation_levels` for BTC at 2026-10-26 19:43 UTC. Levels are projected from open positions: they say where liquidations would cluster, not how much would trade.</sub>
+
+## Highlights
+
+- **No key, no install.** Add one URL, sign in through your client's OAuth flow, and approve read access.
+- **Every client that speaks MCP.** Claude Code, Claude web and Desktop, ChatGPT, Codex, Cursor, VS Code, Antigravity and Gemini CLI, with setup steps for each below.
+- **Both venues, every market.** Hyperliquid core perps, HIP-3, HIP-4 and Spot, and Lighter on mainnet and Robinhood Chain.
+- **Read-only by default.** Market data needs `mcp:market.read`; webhook tools appear only if you also grant webhook scopes.
 
 ## Connect
 
