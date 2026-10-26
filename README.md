@@ -13,8 +13,6 @@
 
 Query Hyperliquid and Lighter market data from your agent. Get current and historical order books, trades, candles, funding, open interest, liquidations, positions and data coverage through read-only market-data tools, and manage webhooks when you grant webhook access.
 
-<sub>The answer above came from `get_liquidation_levels` for BTC at 2026-10-26 19:43 UTC. Levels are projected from open positions: they say where liquidations would cluster, not how much would trade.</sub>
-
 ## Highlights
 
 - **No key, no install.** Add one URL, sign in through your client's OAuth flow, and approve read access.
