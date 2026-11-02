@@ -54,13 +54,13 @@ In Claude Code, run `/mcp`, select `0xarchive`, and choose **Authenticate**. Com
 <details>
 <summary><strong>Claude web, Desktop, and Cowork</strong></summary>
 
-1. Open **Customize → Connectors** in Claude.
-2. Click **+ → Add custom connector**.
-3. Name it `0xArchive` and enter `https://mcp.0xarchive.io/mcp`.
-4. Add the connector, click **Connect**, and complete the OAuth sign-in.
-5. Enable it from **+ → Connectors** in your conversation.
+1. Open [0xArchive in Claude's connector directory](https://claude.ai/directory/0xarchive) and add the connector.
+2. Sign in to 0xArchive and approve the connection.
+3. Enable it from **+ → Connectors** in your conversation.
 
 For Team and Enterprise workspaces, an owner first adds the connector in **Organization settings → Connectors**; each member then connects their own account.
+
+To add it as a custom connector instead, open **Customize → Connectors**, click **+ → Add custom connector**, name it `0xArchive`, enter `https://mcp.0xarchive.io/mcp`, then click **Connect** and complete the OAuth sign-in.
 
 [Claude custom connector guide](https://support.claude.com/en/articles/11175166-getting-started-with-custom-connectors-using-remote-mcp)
 
@@ -69,10 +69,13 @@ For Team and Enterprise workspaces, an owner first adds the connector in **Organ
 <details>
 <summary><strong>ChatGPT</strong></summary>
 
-1. Enable **Developer mode** in **Settings → Security & Login**.
-2. Open **Plugins** and use the **+** button to add an MCP connection.
-3. Name it `0xArchive`, enter `https://mcp.0xarchive.io/mcp`, and complete OAuth authentication.
-4. Start a new conversation and select the connection from **+ → More**.
+1. Open the [0xArchive plugin](https://chatgpt.com/plugins/plugin_asdk_app_6ad6915a7c208191aeb3c0d49a954a96) by Archive Labs Inc and choose **Install plugin**.
+2. Connect it, sign in to 0xArchive, and approve the connection.
+3. Choose **Try in chat** to start a conversation with 0xArchive.
+
+You can also find it by searching for **0xArchive** in ChatGPT's **Plugins** directory.
+
+To add it as a custom MCP connection instead, enable **Developer mode** in **Settings → Security & Login**, open **Plugins** and use the **+** button to add an MCP connection, name it `0xArchive`, enter `https://mcp.0xarchive.io/mcp`, and complete OAuth authentication. Then select it from **+ → More** in a new conversation.
 
 [ChatGPT MCP connection guide](https://developers.openai.com/plugins/deploy/connect-chatgpt)
 
