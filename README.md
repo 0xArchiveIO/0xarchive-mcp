@@ -207,17 +207,18 @@ Grok starts the OAuth flow when the server is first used. In the terminal interf
 <details>
 <summary><strong>Hermes Agent</strong></summary>
 
-```bash
-hermes mcp add --url https://mcp.0xarchive.io/mcp --auth oauth 0xarchive
-```
-
-Authenticate with your 0xArchive account:
+Install the plugin from the Hermes plugin catalog, then sign in once with your 0xArchive account:
 
 ```bash
-hermes mcp login 0xarchive
+hermes plugins install 0xarchive --enable
+hermes mcp add 0xarchive --url https://mcp.0xarchive.io/mcp --auth oauth --connect-timeout 300
 ```
 
-Run `hermes mcp test 0xarchive` to check the connection. If prompted to choose tools, enable the markets and data you need.
+The second command opens the browser sign-in and saves the connection. Without the plugin, the same command adds the server on its own.
+
+The plugin asks before any tool that changes your account, such as creating a webhook or setting up your Terminal. The sign-in command replaces the plugin's entry with your own, so add `trust: untrusted` under `mcp_servers.0xarchive` in `config.yaml` to keep those prompts.
+
+To sign in again later, run `hermes mcp login 0xarchive`. Run `hermes mcp test 0xarchive` to check the connection. If prompted to choose tools, enable the markets and data you need.
 
 [Hermes MCP documentation](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp)
 

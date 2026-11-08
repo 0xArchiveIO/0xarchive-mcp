@@ -1,0 +1,21 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "0xarchive",
+  "version": "1.0.0",
+  "description": "Hyperliquid and Lighter market data through 0xArchive's hosted MCP server: order books, trades, candles, funding, open interest and coverage, with OAuth sign-in and no API key.",
+  "author": {
+    "name": "0xArchive",
+    "url": "https://0xarchive.io"
+  },
+  "homepage": "https://docs.0xarchive.io/mcp-server",
+  "repository": "https://github.com/0xArchiveIO/0xarchive-mcp",
+  "license": "MIT",
+  "keywords": ["mcp", "market-data", "hyperliquid", "lighter", "crypto"],
+  "extensions": {
+    "com.nousresearch.hermes": {
+      "servers": {
+        "0xarchive": { "trust": "untrusted" }
+      }
+    }
+  }
+}
