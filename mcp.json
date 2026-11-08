@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "0xarchive": {
+      "type": "streamable-http",
+      "url": "https://mcp.0xarchive.io/mcp"
+    }
+  }
+}

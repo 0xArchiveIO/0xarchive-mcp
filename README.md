@@ -207,6 +207,14 @@ Grok starts the OAuth flow when the server is first used. In the terminal interf
 <details>
 <summary><strong>Hermes Agent</strong></summary>
 
+Install the plugin from the Hermes plugin catalog:
+
+```bash
+hermes plugins install 0xarchive --enable
+```
+
+Or add the server directly:
+
 ```bash
 hermes mcp add --url https://mcp.0xarchive.io/mcp --auth oauth 0xarchive
 ```
